@@ -1,0 +1,456 @@
+/* ============================================================
+   WEBSITE NHÀ SÁCH — style.css
+   Nhúng sau Bootstrap trong header.php:
+   <link href="/nhasach/assets/css/style.css" rel="stylesheet">
+   ============================================================ */
+
+/* ---- Màu chủ đạo ---- */
+:root {
+  --primary: #1a1a2e;
+  --accent: #f4a261;
+  --accent-dk: #e08c4a;
+  --danger: #e63946;
+  --light-bg: #f8f9fa;
+  --card-radius: 12px;
+}
+
+body {
+  color: #2d2d2d;
+  background: var(--light-bg);
+}
+
+a {
+  text-decoration: none;
+}
+
+/* ============================================================
+   CARD SÁCH — dùng ở index.php, books.php, kết quả tìm kiếm
+   ============================================================ */
+.card-sach {
+  background: #fff;
+  border-radius: var(--card-radius);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  transition:
+    transform 0.22s,
+    box-shadow 0.22s;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.card-sach:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Ảnh bìa */
+.card-sach-img-wrap {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  height: 200px;
+  background: #f0f0f0;
+}
+.card-sach-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+.card-sach:hover .card-sach-img {
+  transform: scale(1.05);
+}
+
+/* Placeholder khi không có ảnh */
+.card-sach-no-img {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e9ecef, #dee2e6);
+  color: #adb5bd;
+  font-size: 3rem;
+}
+
+/* Badge trạng thái */
+.card-sach-badge-out,
+.card-sach-badge-low {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+.card-sach-badge-out {
+  background: var(--danger);
+  color: #fff;
+}
+.card-sach-badge-low {
+  background: #ff9f1c;
+  color: #fff;
+}
+
+/* Body card */
+.card-sach-body {
+  padding: 12px 14px 14px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-sach-tag {
+  font-size: 0.7rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.card-sach-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--primary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+  margin-bottom: 4px;
+}
+.card-sach-title:hover {
+  color: var(--accent);
+}
+
+.card-sach-author {
+  font-size: 0.78rem;
+  color: #888;
+  margin-bottom: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Footer card: giá + nút giỏ */
+.card-sach-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+.card-sach-price {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--danger);
+}
+.card-sach-btn-cart {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition:
+    background 0.2s,
+    transform 0.15s;
+  flex-shrink: 0;
+}
+.card-sach-btn-cart:hover {
+  background: var(--accent-dk);
+  transform: scale(1.1);
+  color: #fff;
+}
+.card-sach-btn-disabled {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #dee2e6;
+  color: #adb5bd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   TRANG DANH SÁCH SÁCH (books.php)
+   ============================================================ */
+.filter-sidebar {
+  background: #fff;
+  border-radius: var(--card-radius);
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 72px;
+}
+.filter-sidebar .filter-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.filter-sidebar .list-group-item {
+  border: none;
+  padding: 6px 0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: transparent;
+  color: #444;
+  transition: color 0.15s;
+}
+.filter-sidebar .list-group-item:hover,
+.filter-sidebar .list-group-item.active {
+  color: var(--accent);
+  font-weight: 600;
+  background: transparent;
+}
+
+/* Phân trang */
+.pagination .page-link {
+  border-radius: 8px !important;
+  margin: 0 2px;
+  border: 1px solid #dee2e6;
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+.pagination .page-item.active .page-link {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.pagination .page-link:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ============================================================
+   TRANG CHI TIẾT SÁCH (book.php)
+   ============================================================ */
+.book-detail-img {
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: var(--card-radius);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+.book-detail-price {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--danger);
+}
+.book-detail-badge {
+  font-size: 0.8rem;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+.qty-input {
+  width: 60px;
+  text-align: center;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 1rem;
+}
+
+/* ============================================================
+   TRANG GIỎ HÀNG (cart.php)
+   ============================================================ */
+.cart-table th {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+  font-weight: 600;
+  border-top: none;
+}
+.cart-table td {
+  vertical-align: middle;
+}
+.cart-qty-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  background: #fff;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cart-qty-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.order-summary {
+  background: #fff;
+  border-radius: var(--card-radius);
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 72px;
+}
+
+/* ============================================================
+   FORM ĐĂNG NHẬP / ĐĂNG KÝ
+   ============================================================ */
+.auth-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  padding: 36px 40px;
+  max-width: 480px;
+  margin: 60px auto;
+}
+.auth-card h3 {
+  color: var(--primary);
+  font-weight: 800;
+}
+.auth-card .form-control {
+  border-radius: 10px;
+  border: 1px solid #dee2e6;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+}
+.auth-card .form-control:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(244, 162, 97, 0.15);
+}
+.auth-card .btn-primary {
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  padding: 11px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.auth-card .btn-primary:hover {
+  background: var(--accent-dk);
+}
+
+/* ============================================================
+   TRANG ADMIN
+   ============================================================ */
+.admin-sidebar {
+  background: var(--primary);
+  min-height: 100vh;
+  padding-top: 20px;
+  width: 240px;
+  position: fixed;
+  left: 0;
+  top: 0;
+}
+.admin-sidebar .brand {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0 20px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.admin-sidebar .brand span {
+  color: var(--accent);
+}
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.admin-nav-link:hover,
+.admin-nav-link.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--accent);
+  border-left: 3px solid var(--accent);
+}
+.admin-content {
+  margin-left: 240px;
+  padding: 24px;
+  min-height: 100vh;
+}
+.stat-card {
+  background: #fff;
+  border-radius: var(--card-radius);
+  padding: 20px 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  border-left: 4px solid var(--accent);
+}
+.stat-card .stat-number {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+.stat-card .stat-label {
+  font-size: 0.82rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ============================================================
+   TIỆN ÍCH CHUNG
+   ============================================================ */
+.section-title {
+  font-weight: 700;
+  color: var(--primary);
+  border-left: 4px solid var(--accent);
+  padding-left: 12px;
+}
+.btn-accent {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 25px;
+}
+.btn-accent:hover {
+  background: var(--accent-dk);
+  color: #fff;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #adb5bd;
+}
+.empty-state i {
+  font-size: 4rem;
+  display: block;
+  margin-bottom: 16px;
+}
+.empty-state h5 {
+  color: #6c757d;
+}
+
+/* Responsive nhỏ */
+@media (max-width: 576px) {
+  .card-sach-img-wrap {
+    height: 160px;
+  }
+  .auth-card {
+    padding: 24px 20px;
+    margin: 30px auto;
+  }
+  .admin-sidebar {
+    display: none;
+  }
+  .admin-content {
+    margin-left: 0;
+  }
+}

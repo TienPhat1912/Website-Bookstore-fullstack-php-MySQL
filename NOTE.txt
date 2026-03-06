@@ -1,0 +1,8 @@
+Tài khoản admin mặc định sau khi import:
+
+Email: admin@nhasach.com
+Mật khẩu: Admin@123
+
+Tài khoản demo khách hàng
+Email: example@gmail.com
+Mật khẩu: 123456
