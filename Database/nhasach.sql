@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th3 06, 2026 lúc 01:46 PM
+-- Thời gian đã tạo: Th3 06, 2026 lúc 02:47 PM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -20,60 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Cơ sở dữ liệu: `nhasach`
 --
-
-DELIMITER $$
---
--- Thủ tục
---
-CREATE DEFINER=`root`@`localhost` PROCEDURE `hoan_thanh_phieu_nhap` (IN `p_phieu_id` INT)   BEGIN
-  DECLARE done INT DEFAULT 0;
-  DECLARE v_sach_id     INT;
-  DECLARE v_sl_nhap     INT;
-  DECLARE v_gia_nhap_moi DECIMAL(15,2);
-  DECLARE v_sl_ton      INT;
-  DECLARE v_gia_nhap_cu DECIMAL(15,2);
-  DECLARE v_gia_bq      DECIMAL(15,2);
-
-  DECLARE cur CURSOR FOR
-    SELECT sach_id, so_luong, gia_nhap
-    FROM chi_tiet_phieu_nhap
-    WHERE phieu_nhap_id = p_phieu_id;
-
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-
-  IF (SELECT trang_thai FROM phieu_nhap WHERE id = p_phieu_id) = 'draft' THEN
-
-    OPEN cur;
-    loop_nhap: LOOP
-      FETCH cur INTO v_sach_id, v_sl_nhap, v_gia_nhap_moi;
-      IF done THEN LEAVE loop_nhap; END IF;
-
-      SELECT so_luong, gia_nhap INTO v_sl_ton, v_gia_nhap_cu
-      FROM sach WHERE id = v_sach_id;
-
-      IF (v_sl_ton + v_sl_nhap) > 0 THEN
-        SET v_gia_bq = (v_sl_ton * v_gia_nhap_cu + v_sl_nhap * v_gia_nhap_moi)
-                       / (v_sl_ton + v_sl_nhap);
-      ELSE
-        SET v_gia_bq = v_gia_nhap_moi;
-      END IF;
-
-      UPDATE sach SET
-        so_luong     = so_luong + v_sl_nhap,
-        gia_nhap     = ROUND(v_gia_bq, 2),
-        da_nhap_hang = 1,
-        hien_trang   = 1
-      WHERE id = v_sach_id;
-
-    END LOOP;
-    CLOSE cur;
-
-    UPDATE phieu_nhap SET trang_thai = 'done' WHERE id = p_phieu_id;
-
-  END IF;
-END$$
-
-DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -128,20 +74,6 @@ CREATE TABLE `chi_tiet_nhap` (
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `chi_tiet_phieu_nhap`
---
-
-CREATE TABLE `chi_tiet_phieu_nhap` (
-  `id` int(11) NOT NULL,
-  `phieu_nhap_id` int(11) NOT NULL,
-  `sach_id` int(11) NOT NULL,
-  `so_luong` int(11) NOT NULL,
-  `gia_nhap` decimal(15,2) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
 -- Cấu trúc bảng cho bảng `don_hang`
 --
 
@@ -177,7 +109,6 @@ CREATE TABLE `khach_hang` (
   `phuong_xa` varchar(100) DEFAULT NULL,
   `tinh_tp` varchar(100) DEFAULT NULL,
   `bi_khoa` tinyint(1) NOT NULL DEFAULT 0,
-  `ngay_dang_ky` datetime DEFAULT current_timestamp(),
   `trang_thai` tinyint(1) NOT NULL DEFAULT 1,
   `ngay_tao` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -186,10 +117,10 @@ CREATE TABLE `khach_hang` (
 -- Đang đổ dữ liệu cho bảng `khach_hang`
 --
 
-INSERT INTO `khach_hang` (`id`, `ho_ten`, `email`, `mat_khau`, `so_dien_thoai`, `dia_chi`, `phuong_xa`, `tinh_tp`, `bi_khoa`, `ngay_dang_ky`, `trang_thai`, `ngay_tao`) VALUES
-(1, 'Trần Tiến Phát', 'tienphatt1912@gmail.com', '$2y$10$YDppB2pIzJgKHbGa2HOSWuGqtzrQmygyMkI.I7jIbwZKpc9TTUfTS', '0392986719', '126B Mai Chí Thọ', 'An phú', 'TP. Hồ Chí Minh', 0, '2026-03-06 15:13:30', 1, '2026-03-06 19:27:22'),
-(2, 'Cao Thái Phương Thanh', 'example@gmail.com', '$2y$10$GD975fsJBOS9AM9qFgXzHuYHDuTj4Xsigzrh9tICjxb8YJ.CxtI4O', '123456789', '273, An Dương Vương', 'Phường 3', 'TP. Hồ Chí Minh', 0, '2026-03-06 15:19:50', 1, '2026-03-06 19:27:22'),
-(3, 'Lê Nguyễn Anh Bảo', 'lebao09@gmail.com', '$2y$10$tbLNAj4U2pBKfMOzCy9dCeruNzHvYvzdKB1BVM2Y3N4N5Yuw3bC42', '0909090099', '1, Võ Văn Ngân', 'Phường Linh Trung', 'Thành phố Hồ Chí Minh', 0, '2026-03-06 15:48:05', 1, '2026-03-06 19:27:22');
+INSERT INTO `khach_hang` (`id`, `ho_ten`, `email`, `mat_khau`, `so_dien_thoai`, `dia_chi`, `phuong_xa`, `tinh_tp`, `bi_khoa`, `trang_thai`, `ngay_tao`) VALUES
+(1, 'Trần Tiến Phát', 'tienphatt1912@gmail.com', '$2y$10$YDppB2pIzJgKHbGa2HOSWuGqtzrQmygyMkI.I7jIbwZKpc9TTUfTS', '0392986719', '126B Mai Chí Thọ', 'An phú', 'TP. Hồ Chí Minh', 0, 1, '2026-03-06 19:27:22'),
+(2, 'Cao Thái Phương Thanh', 'example@gmail.com', '$2y$10$GD975fsJBOS9AM9qFgXzHuYHDuTj4Xsigzrh9tICjxb8YJ.CxtI4O', '123456789', '273, An Dương Vương', 'Phường 3', 'TP. Hồ Chí Minh', 0, 1, '2026-03-06 19:27:22'),
+(3, 'Lê Nguyễn Anh Bảo', 'lebao09@gmail.com', '$2y$10$tbLNAj4U2pBKfMOzCy9dCeruNzHvYvzdKB1BVM2Y3N4N5Yuw3bC42', '0909090099', '1, Võ Văn Ngân', 'Phường Linh Trung', 'Thành phố Hồ Chí Minh', 0, 1, '2026-03-06 19:27:22');
 
 -- --------------------------------------------------------
 
@@ -312,12 +243,6 @@ CREATE TABLE `v_gia_ban` (
 -- (See below for the actual view)
 --
 CREATE TABLE `v_thong_ke_nhap_xuat` (
-`sach_id` int(11)
-,`ma_sach` varchar(20)
-,`ten` varchar(255)
-,`tong_nhap` decimal(32,0)
-,`tong_xuat` decimal(32,0)
-,`ton_kho_thuc_te` int(11)
 );
 
 -- --------------------------------------------------------
@@ -370,14 +295,6 @@ ALTER TABLE `chi_tiet_don_hang`
 -- Chỉ mục cho bảng `chi_tiet_nhap`
 --
 ALTER TABLE `chi_tiet_nhap`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `phieu_nhap_id` (`phieu_nhap_id`),
-  ADD KEY `sach_id` (`sach_id`);
-
---
--- Chỉ mục cho bảng `chi_tiet_phieu_nhap`
---
-ALTER TABLE `chi_tiet_phieu_nhap`
   ADD PRIMARY KEY (`id`),
   ADD KEY `phieu_nhap_id` (`phieu_nhap_id`),
   ADD KEY `sach_id` (`sach_id`);
@@ -448,12 +365,6 @@ ALTER TABLE `chi_tiet_nhap`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT cho bảng `chi_tiet_phieu_nhap`
---
-ALTER TABLE `chi_tiet_phieu_nhap`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT cho bảng `don_hang`
 --
 ALTER TABLE `don_hang`
@@ -500,13 +411,6 @@ ALTER TABLE `chi_tiet_don_hang`
 ALTER TABLE `chi_tiet_nhap`
   ADD CONSTRAINT `chi_tiet_nhap_ibfk_1` FOREIGN KEY (`phieu_nhap_id`) REFERENCES `phieu_nhap` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `chi_tiet_nhap_ibfk_2` FOREIGN KEY (`sach_id`) REFERENCES `sach` (`id`);
-
---
--- Các ràng buộc cho bảng `chi_tiet_phieu_nhap`
---
-ALTER TABLE `chi_tiet_phieu_nhap`
-  ADD CONSTRAINT `chi_tiet_phieu_nhap_ibfk_1` FOREIGN KEY (`phieu_nhap_id`) REFERENCES `phieu_nhap` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `chi_tiet_phieu_nhap_ibfk_2` FOREIGN KEY (`sach_id`) REFERENCES `sach` (`id`);
 
 --
 -- Các ràng buộc cho bảng `don_hang`

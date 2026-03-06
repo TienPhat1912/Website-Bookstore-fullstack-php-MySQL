@@ -8,14 +8,13 @@ $old    = [];
 
 // ---- KHOÁ / MỞ KHOÁ ----
 if (isset($_GET['action']) && in_array($_GET['action'], ['lock','unlock']) && isset($_GET['id'])) {
-    $trang_thai = $_GET['action'] === 'lock' ? 0 : 1;
-    $id = (int)$_GET['id'];
-    $pdo->prepare("UPDATE khach_hang SET trang_thai = ? WHERE id = ?")
-        ->execute([$trang_thai, $id]);
-    $_SESSION['flash'] = [
-        'type' => $trang_thai ? 'success' : 'warning',
-        'msg'  => $trang_thai ? 'Đã mở khoá tài khoản.' : 'Đã khoá tài khoản.'
-    ];
+    $bi_khoa = $_GET['action'] === 'lock' ? 1 : 0;
+$pdo->prepare("UPDATE khach_hang SET bi_khoa = ? WHERE id = ?")
+    ->execute([$bi_khoa, $id]);
+$_SESSION['flash'] = [
+    'type' => $bi_khoa ? 'warning' : 'success',
+    'msg'  => $bi_khoa ? 'Đã khoá tài khoản.' : 'Đã mở khoá tài khoản.'
+];
     header('Location: /nhasach/admin/users.php');
     exit;
 }
@@ -74,8 +73,8 @@ $filter_tt     = $_GET['trang_thai'] ?? 'tat_ca';
 $where  = ["1=1"];
 $params = [];
 if ($filter_search !== '') { $where[] = "(ho_ten LIKE ? OR email LIKE ? OR so_dien_thoai LIKE ?)"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; }
-if ($filter_tt === 'hoat_dong')  { $where[] = "trang_thai = 1"; }
-if ($filter_tt === 'bi_khoa')    { $where[] = "trang_thai = 0"; }
+if ($filter_tt === 'hoat_dong')  { $where[] = "bi_khoa = 0"; }
+if ($filter_tt === 'bi_khoa')    { $where[] = "bi_khoa = 1"; }
 
 $where_sql = implode(' AND ', $where);
 $users = $pdo->prepare("
@@ -90,7 +89,7 @@ $users->execute($params);
 $users = $users->fetchAll();
 
 $tong_kh      = $pdo->query("SELECT COUNT(*) FROM khach_hang")->fetchColumn();
-$tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE trang_thai = 0")->fetchColumn();
+$tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE bi_khoa = 1")->fetchColumn();
 ?>
 
 <div class="page-header">
@@ -254,7 +253,7 @@ $tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE trang_thai = 
               <?= $u['tong_chi'] > 0 ? number_format($u['tong_chi'], 0, ',', '.') . '₫' : '—' ?>
             </td>
             <td>
-              <?php if ($u['trang_thai']): ?>
+              <?php if (!$u['bi_khoa']): ?>
                 <span class="badge bg-success">Hoạt động</span>
               <?php else: ?>
                 <span class="badge bg-danger">Bị khoá</span>
@@ -263,7 +262,7 @@ $tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE trang_thai = 
             <td>
               <div class="d-flex gap-1 flex-wrap">
                 <!-- Khoá / Mở khoá -->
-                <?php if ($u['trang_thai']): ?>
+                <?php if (!$u['bi_khoa']): ?>
                   <a href="/nhasach/admin/users.php?action=lock&id=<?= $u['id'] ?>"
                      class="btn btn-sm btn-outline-warning" style="border-radius:6px;" title="Khoá tài khoản"
                      onclick="return confirm('Khoá tài khoản <?= htmlspecialchars($u['ho_ten']) ?>?')">
