@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th3 06, 2026 lúc 02:47 PM
+-- Thời gian đã tạo: Th3 06, 2026 lúc 03:13 PM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -243,6 +243,12 @@ CREATE TABLE `v_gia_ban` (
 -- (See below for the actual view)
 --
 CREATE TABLE `v_thong_ke_nhap_xuat` (
+`sach_id` int(11)
+,`ma_sach` varchar(20)
+,`ten` varchar(255)
+,`tong_nhap` decimal(32,0)
+,`tong_xuat` decimal(32,0)
+,`ton_kho_thuc_te` int(11)
 );
 
 -- --------------------------------------------------------
@@ -270,7 +276,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `v_thong_ke_nhap_xuat`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_thong_ke_nhap_xuat`  AS SELECT `s`.`id` AS `sach_id`, `s`.`ma_sach` AS `ma_sach`, `s`.`ten` AS `ten`, coalesce((select sum(`ct`.`so_luong`) from (`chi_tiet_phieu_nhap` `ct` join `phieu_nhap` `pn` on(`pn`.`id` = `ct`.`phieu_nhap_id`)) where `ct`.`sach_id` = `s`.`id` and `pn`.`trang_thai` = 'done'),0) AS `tong_nhap`, coalesce((select sum(`ct`.`so_luong`) from (`chi_tiet_don_hang` `ct` join `don_hang` `dh` on(`dh`.`id` = `ct`.`don_hang_id`)) where `ct`.`sach_id` = `s`.`id` and `dh`.`trang_thai` <> 'da_huy'),0) AS `tong_xuat`, `s`.`so_luong` AS `ton_kho_thuc_te` FROM `sach` AS `s` ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_thong_ke_nhap_xuat`  AS SELECT `s`.`id` AS `sach_id`, `s`.`ma_sach` AS `ma_sach`, `s`.`ten` AS `ten`, coalesce((select sum(`cn`.`so_luong`) from (`chi_tiet_nhap` `cn` join `phieu_nhap` `pn` on(`pn`.`id` = `cn`.`phieu_nhap_id`)) where `cn`.`sach_id` = `s`.`id` and `pn`.`trang_thai` = 'done'),0) AS `tong_nhap`, coalesce((select sum(`ct`.`so_luong`) from (`chi_tiet_don_hang` `ct` join `don_hang` `dh` on(`dh`.`id` = `ct`.`don_hang_id`)) where `ct`.`sach_id` = `s`.`id` and `dh`.`trang_thai` <> 'da_huy'),0) AS `tong_xuat`, `s`.`so_luong` AS `ton_kho_thuc_te` FROM `sach` AS `s` ;
 
 --
 -- Chỉ mục cho các bảng đã đổ

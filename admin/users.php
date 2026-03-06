@@ -8,8 +8,9 @@ $old    = [];
 
 // ---- KHOÁ / MỞ KHOÁ ----
 if (isset($_GET['action']) && in_array($_GET['action'], ['lock','unlock']) && isset($_GET['id'])) {
-    $bi_khoa = $_GET['action'] === 'lock' ? 1 : 0;
-$pdo->prepare("UPDATE khach_hang SET bi_khoa = ? WHERE id = ?")
+  $bi_khoa = $_GET['action'] === 'lock' ? 1 : 0;
+  $id = (int)$_GET['id'];
+  $pdo->prepare("UPDATE khach_hang SET bi_khoa = ? WHERE id = ?")
     ->execute([$bi_khoa, $id]);
 $_SESSION['flash'] = [
     'type' => $bi_khoa ? 'warning' : 'success',

@@ -106,7 +106,7 @@ if ($action === 'delete_item' && isset($_GET['item_id'])) {
 if ($action === 'create_phieu' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $ghi_chu  = trim($_POST['ghi_chu'] ?? '');
     $ma_phieu = 'PN' . date('ymdHis');
-    $pdo->prepare("INSERT INTO phieu_nhap (ma_phieu, ghi_chu, trang_thai) VALUES (?, ?, 'nhap')")
+    $pdo->prepare("INSERT INTO phieu_nhap (ma_phieu, ghi_chu, trang_thai) VALUES (?, ?, 'draft')")
         ->execute([$ma_phieu, $ghi_chu]);
     $new_id = $pdo->lastInsertId();
     $_SESSION['flash'] = ['type' => 'success', 'msg' => "Tạo phiếu $ma_phieu thành công. Bây giờ thêm sách vào phiếu."];
