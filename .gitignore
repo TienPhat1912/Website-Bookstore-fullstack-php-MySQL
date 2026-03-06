@@ -1,0 +1,8 @@
+# Ảnh upload của user (không push lên)
+uploads/*
+!uploads/.gitkeep
+
+# Editor & OS
+.vscode/
+.DS_Store
+Thumbs.db
