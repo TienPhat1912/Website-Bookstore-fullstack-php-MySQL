@@ -117,7 +117,6 @@ $pt_label = [
           <div class="col-7">
             <?= htmlspecialchars($don['dia_chi']) ?>,
             <?= htmlspecialchars($don['phuong_xa']) ?>,
-            <?= htmlspecialchars($don['quan_huyen']) ?>,
             <?= htmlspecialchars($don['tinh_tp']) ?>
           </div>
 

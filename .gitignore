@@ -1,6 +1,7 @@
+
 # Ảnh upload của user (không push lên)
 uploads/*
-!uploads/.gitkeep
+!uploads/.keep
 
 # Editor & OS
 .vscode/

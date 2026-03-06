@@ -59,14 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sdt     = $kh['so_dien_thoai'];
         $dia_chi = $kh['dia_chi'];
         $phuong  = $kh['phuong_xa'];
-        $quan    = $kh['quan_huyen'];
         $tinh    = $kh['tinh_tp'];
     } else {
         $ten_nn  = trim($_POST['ten_nguoi_nhan'] ?? '');
         $sdt     = trim($_POST['so_dien_thoai']  ?? '');
         $dia_chi = trim($_POST['dia_chi']         ?? '');
         $phuong  = trim($_POST['phuong_xa']       ?? '');
-        $quan    = trim($_POST['quan_huyen']      ?? '');
         $tinh    = trim($_POST['tinh_tp']         ?? '');
 
         if (empty($ten_nn)) $errors['ten_nn']  = 'Vui lòng nhập tên người nhận.';
@@ -75,7 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $errors['sdt']     = 'Số điện thoại không hợp lệ.';
         if (empty($dia_chi))$errors['dia_chi'] = 'Vui lòng nhập địa chỉ.';
         if (empty($phuong)) $errors['phuong']  = 'Vui lòng nhập phường/xã.';
-        if (empty($quan))   $errors['quan']    = 'Vui lòng nhập quận/huyện.';
         if (empty($tinh))   $errors['tinh']    = 'Vui lòng nhập tỉnh/thành phố.';
     }
 
@@ -105,13 +102,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("
                 INSERT INTO don_hang
                     (ma_don, khach_hang_id, ten_nguoi_nhan, so_dien_thoai,
-                     dia_chi, phuong_xa, quan_huyen, tinh_tp,
+                     dia_chi, phuong_xa, tinh_tp,
                      phuong_thuc_tt, tong_tien, trang_thai)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'cho_xu_ly')
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'cho_xu_ly')
             ");
             $stmt->execute([
                 $ma_don, $kh['id'], $ten_nn, $sdt,
-                $dia_chi, $phuong, $quan, $tinh,
+                $dia_chi, $phuong, $tinh,
                 $phuong_thuc, $tong_tien
             ]);
             $don_hang_id = $pdo->lastInsertId();
@@ -191,7 +188,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   <?= htmlspecialchars($kh['ho_ten']) ?> —
                   <?= htmlspecialchars($kh['dia_chi']) ?>,
                   <?= htmlspecialchars($kh['phuong_xa']) ?>,
-                  <?= htmlspecialchars($kh['quan_huyen']) ?>,
                   <?= htmlspecialchars($kh['tinh_tp']) ?>
                 </small>
               </label>
@@ -267,18 +263,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      value="<?= htmlspecialchars($_POST['phuong_xa'] ?? '') ?>">
               <?php if (isset($errors['phuong'])): ?>
                 <div class="invalid-feedback"><?= $errors['phuong'] ?></div>
-              <?php endif; ?>
-            </div>
-            <div class="col-6">
-              <label class="form-label fw-semibold" style="font-size:.85rem;">
-                Quận/Huyện <span class="text-danger">*</span>
-              </label>
-              <input type="text" name="quan_huyen"
-                     class="form-control <?= isset($errors['quan']) ? 'is-invalid' : '' ?>"
-                     placeholder="Quận 5"
-                     value="<?= htmlspecialchars($_POST['quan_huyen'] ?? '') ?>">
-              <?php if (isset($errors['quan'])): ?>
-                <div class="invalid-feedback"><?= $errors['quan'] ?></div>
               <?php endif; ?>
             </div>
           </div>
