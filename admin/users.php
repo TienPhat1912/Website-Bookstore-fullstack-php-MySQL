@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
     $old      = $_POST;
     $ho_ten   = trim($_POST['ho_ten']  ?? '');
     $email    = trim($_POST['email']   ?? '');
-    $sdt      = trim($_POST['sdt']     ?? '');
+    $sdt      = trim($_POST['so_dien_thoai']     ?? '');
     $dia_chi  = trim($_POST['dia_chi'] ?? '');
     $pass     = $_POST['mat_khau']     ?? '';
 
@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
     if (empty($errors)) {
         $hash = password_hash($pass, PASSWORD_DEFAULT);
         $pdo->prepare("
-            INSERT INTO khach_hang (ho_ten, email, sdt, dia_chi, mat_khau)
+            INSERT INTO khach_hang (ho_ten, email, so_dien_thoai, dia_chi, mat_khau)
             VALUES (?, ?, ?, ?, ?)
         ")->execute([$ho_ten, $email, $sdt, $dia_chi, $hash]);
         $_SESSION['flash'] = ['type' => 'success', 'msg' => 'Thêm tài khoản thành công!'];
@@ -73,7 +73,7 @@ $filter_tt     = $_GET['trang_thai'] ?? 'tat_ca';
 
 $where  = ["1=1"];
 $params = [];
-if ($filter_search !== '') { $where[] = "(ho_ten LIKE ? OR email LIKE ? OR sdt LIKE ?)"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; }
+if ($filter_search !== '') { $where[] = "(ho_ten LIKE ? OR email LIKE ? OR so_dien_thoai LIKE ?)"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; }
 if ($filter_tt === 'hoat_dong')  { $where[] = "trang_thai = 1"; }
 if ($filter_tt === 'bi_khoa')    { $where[] = "trang_thai = 0"; }
 
@@ -164,8 +164,8 @@ $tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE trang_thai = 
       </div>
       <div class="col-md-4">
         <label class="form-label fw-semibold" style="font-size:.85rem;">Số điện thoại</label>
-        <input type="text" name="sdt" class="form-control"
-               value="<?= htmlspecialchars($old['sdt'] ?? '') ?>"
+        <input type="text" name="so_dien_thoai" class="form-control"
+               value="<?= htmlspecialchars($old['so_dien_thoai'] ?? '') ?>"
                placeholder="0901234567">
       </div>
       <div class="col-md-8">
@@ -240,7 +240,7 @@ $tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE trang_thai = 
               <div class="fw-semibold" style="font-size:.88rem;"><?= htmlspecialchars($u['ho_ten']) ?></div>
             </td>
             <td style="font-size:.85rem;"><?= htmlspecialchars($u['email']) ?></td>
-            <td style="font-size:.85rem;"><?= htmlspecialchars($u['sdt'] ?? '—') ?></td>
+            <td style="font-size:.85rem;"><?= htmlspecialchars($u['so_dien_thoai'] ?? '—') ?></td>
             <td style="font-size:.82rem; color:#888;">
               <?= isset($u['ngay_tao']) ? date('d/m/Y', strtotime($u['ngay_tao'])) : '—' ?>
             </td>

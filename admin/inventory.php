@@ -39,15 +39,15 @@ $sachs = $sachs->fetchAll();
 
 // ---- BÁO CÁO NHẬP HÀNG THEO THÁNG (6 tháng gần nhất) ----
 $nhap_thang = $pdo->query("
-    SELECT DATE_FORMAT(pn.ngay_hoan_thanh, '%Y-%m') AS thang,
+    SELECT DATE_FORMAT(pn.ngay_tao, '%Y-%m') AS thang,
            COUNT(DISTINCT pn.id) AS so_phieu,
            SUM(cn.so_luong) AS tong_sl,
            SUM(cn.so_luong * cn.don_gia) AS tong_tien
     FROM phieu_nhap pn
     JOIN chi_tiet_nhap cn ON cn.phieu_nhap_id = pn.id
-    WHERE pn.trang_thai = 'hoan_thanh'
-      AND pn.ngay_hoan_thanh >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-    GROUP BY DATE_FORMAT(pn.ngay_hoan_thanh, '%Y-%m')
+    WHERE pn.trang_thai = 'done'
+      AND pn.ngay_tao >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+    GROUP BY DATE_FORMAT(pn.ngay_tao, '%Y-%m')
     ORDER BY thang DESC
 ")->fetchAll();
 
@@ -66,8 +66,8 @@ $ban_thang = $pdo->query("
 // ---- TOP 5 SÁCH BÁN CHẠY ----
 $top_ban = $pdo->query("
     SELECT s.ten, s.ma_sach, SUM(ct.so_luong) AS da_ban,
-           SUM(ct.so_luong * ct.don_gia) AS doanh_thu
-    FROM chi_tiet_dh ct
+           SUM(ct.so_luong * ct.gia_ban_luc_dat) AS doanh_thu
+    FROM chi_tiet_don_hang ct
     JOIN sach s ON s.id = ct.sach_id
     JOIN don_hang dh ON dh.id = ct.don_hang_id
     WHERE dh.trang_thai != 'da_huy'

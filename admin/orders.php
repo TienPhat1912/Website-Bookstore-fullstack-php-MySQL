@@ -66,7 +66,7 @@ if (isset($_GET['id'])) {
 
     $items = $pdo->prepare("
         SELECT ct.*, s.ten AS ten_sach, s.ma_sach, s.hinh
-        FROM chi_tiet_dh ct
+        FROM chi_tiet_don_hang ct
         JOIN sach s ON s.id = ct.sach_id
         WHERE ct.don_hang_id = ?
     ");
@@ -93,14 +93,16 @@ if (isset($_GET['id'])) {
           <div class="card-title">Khách hàng</div>
           <p class="mb-1 fw-semibold"><?= htmlspecialchars($don['ho_ten']) ?></p>
           <p class="mb-1" style="font-size:.85rem;">📧 <?= htmlspecialchars($don['email']) ?></p>
-          <p class="mb-0" style="font-size:.85rem;">📞 <?= htmlspecialchars($don['sdt'] ?? '—') ?></p>
+          <p class="mb-0" style="font-size:.85rem;">📞 <?= htmlspecialchars($don['so_dien_thoai'] ?? '—') ?></p>
         </div>
 
         <!-- Thông tin giao hàng -->
         <div class="admin-card mb-4">
           <div class="card-title">Địa chỉ giao hàng</div>
           <p class="mb-0" style="font-size:.88rem; line-height:1.7;">
-            <?= htmlspecialchars($don['dia_chi_giao']) ?>
+            <?= htmlspecialchars($don['dia_chi']) ?>
+            <?php if(!empty($don['phuong_xa'])): ?>, <?= htmlspecialchars($don['phuong_xa']) ?><?php endif; ?>
+            <?php if(!empty($don['tinh_tp'])): ?>, <?= htmlspecialchars($don['tinh_tp']) ?><?php endif; ?>
           </p>
         </div>
 
@@ -178,7 +180,7 @@ if (isset($_GET['id'])) {
                 </tr>
               </thead>
               <tbody>
-                <?php $tong = 0; foreach ($items as $item): $tt = $item['so_luong'] * $item['don_gia']; $tong += $tt; ?>
+                <?php $tong = 0; foreach ($items as $item): $tt = $item['so_luong'] * $item['gia_ban_luc_dat']; $tong += $tt; ?>
                 <tr>
                   <td>
                     <?php if (!empty($item['hinh']) && file_exists('../uploads/'.$item['hinh'])): ?>
@@ -193,7 +195,7 @@ if (isset($_GET['id'])) {
                     <small class="text-muted"><?= htmlspecialchars($item['ma_sach']) ?></small>
                   </td>
                   <td class="text-center"><?= $item['so_luong'] ?></td>
-                  <td class="text-end"><?= number_format($item['don_gia'], 0, ',', '.') ?>₫</td>
+                  <td class="text-end"><?= number_format($item['gia_ban_luc_dat'], 0, ',', '.') ?>₫</td>
                   <td class="text-end" style="font-weight:600;"><?= number_format($tt, 0, ',', '.') ?>₫</td>
                 </tr>
                 <?php endforeach; ?>
@@ -231,15 +233,15 @@ $params = [];
 if ($filter_tt !== 'tat_ca')    { $where[] = "dh.trang_thai = ?"; $params[] = $filter_tt; }
 if ($filter_tu !== '')           { $where[] = "DATE(dh.ngay_dat) >= ?"; $params[] = $filter_tu; }
 if ($filter_den !== '')          { $where[] = "DATE(dh.ngay_dat) <= ?"; $params[] = $filter_den; }
-if ($filter_phuong !== '')       { $where[] = "dh.dia_chi_giao LIKE ?"; $params[] = "%$filter_phuong%"; }
+if ($filter_phuong !== '')       { $where[] = "dh.phuong_xa LIKE ?"; $params[] = "%$filter_phuong%"; }
 if ($filter_search !== '')       { $where[] = "(dh.ma_don LIKE ? OR kh.ho_ten LIKE ?)"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; }
 
-$sort = in_array($_GET['sort'] ?? '', ['phuong']) ? 'dh.dia_chi_giao ASC' : 'dh.ngay_dat DESC';
+$sort = in_array($_GET['sort'] ?? '', ['phuong']) ? 'dh.phuong_xa ASC' : 'dh.ngay_dat DESC';
 
 $where_sql = implode(' AND ', $where);
 $don_hangs = $pdo->prepare("
     SELECT dh.id, dh.ma_don, dh.ngay_dat, dh.tong_tien, dh.trang_thai,
-           dh.dia_chi_giao, dh.phuong_thuc_tt,
+           CONCAT(dh.dia_chi, ', ', COALESCE(dh.phuong_xa,''), ', ', COALESCE(dh.tinh_tp,'')) AS dia_chi_giao, dh.phuong_thuc_tt,
            kh.ho_ten, kh.email
     FROM don_hang dh
     JOIN khach_hang kh ON kh.id = dh.khach_hang_id

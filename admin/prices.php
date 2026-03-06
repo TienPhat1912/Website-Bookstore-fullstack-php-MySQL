@@ -66,12 +66,12 @@ $lich_su_sach_id = (int)($_GET['lich_su'] ?? 0);
 $lich_su = [];
 if ($lich_su_sach_id > 0) {
     $lich_su = $pdo->prepare("
-        SELECT cn.so_luong, cn.don_gia, pn.ma_phieu, pn.ngay_hoan_thanh,
+        SELECT cn.so_luong, cn.don_gia, pn.ma_phieu, pn.ngay_tao AS ngay_hoan_thanh,
                cn.so_luong * cn.don_gia AS thanh_tien
         FROM chi_tiet_nhap cn
         JOIN phieu_nhap pn ON pn.id = cn.phieu_nhap_id
-        WHERE cn.sach_id = ? AND pn.trang_thai = 'hoan_thanh'
-        ORDER BY pn.ngay_hoan_thanh DESC
+        WHERE cn.sach_id = ? AND pn.trang_thai = 'done'
+        ORDER BY pn.ngay_tao DESC
     ");
     $lich_su->execute([$lich_su_sach_id]);
     $lich_su = $lich_su->fetchAll();
