@@ -144,8 +144,8 @@ foreach ($the_loais as $tl) {
   <div class="text-center py-5">
     <i class="bi bi-inbox" style="font-size:4rem; color:#dee2e6;"></i>
     <h5 class="text-muted mt-3">Chưa có sách nào trong kho</h5>
-    <p class="text-muted">Hãy vào trang Admin để nhập hàng trước.</p>
-    <a href="/nhasach/admin/index.php" class="btn btn-primary mt-2">Vào trang Admin</a>
+    <p class="text-muted">Hệ thống đang cập nhật sách mới, vui lòng quay lại sau.</p>
+<a href="/nhasach/books.php" class="btn btn-outline-secondary mt-2">Khám phá danh mục</a>
   </div>
   <?php endif; ?>
 

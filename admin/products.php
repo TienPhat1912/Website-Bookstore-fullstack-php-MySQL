@@ -185,7 +185,11 @@ $sachs = $sachs->fetchAll();
         <input type="text" name="ma_sach"
                class="form-control <?= isset($errors['ma_sach']) ? 'is-invalid' : '' ?>"
                value="<?= htmlspecialchars($edit_sach['ma_sach'] ?? $old['ma_sach'] ?? '') ?>"
-               placeholder="VD: S001">
+               placeholder="VD: S001"
+               <?= $edit_sach ? 'readonly style="background:#f8f9fa; color:#888;"' : '' ?>>
+        <?php if ($edit_sach): ?>
+          <small class="text-muted">Mã sách không thể thay đổi.</small>
+        <?php endif; ?>
         <?php if (isset($errors['ma_sach'])): ?><div class="invalid-feedback"><?= $errors['ma_sach'] ?></div><?php endif; ?>
       </div>
 
@@ -268,13 +272,38 @@ $sachs = $sachs->fetchAll();
                   placeholder="Giới thiệu ngắn về nội dung sách..."><?= htmlspecialchars($edit_sach['mo_ta'] ?? $old['mo_ta'] ?? '') ?></textarea>
       </div>
 
-      <div class="col-12 d-flex gap-2">
+      <div class="col-12 d-flex gap-2 align-items-center flex-wrap">
         <button type="submit" class="btn btn-sm px-4"
                 style="background:#f4a261;color:#fff;border:none;border-radius:8px;">
           <i class="bi bi-check-lg me-1"></i><?= $edit_sach ? 'Cập nhật' : 'Thêm sách' ?>
         </button>
         <a href="/nhasach/admin/products.php" class="btn btn-sm btn-outline-secondary"
            style="border-radius:8px;">Huỷ</a>
+
+        <?php if ($edit_sach): ?>
+          <span class="ms-auto">
+            <?php if ($edit_sach['hien_trang']): ?>
+              <a href="/nhasach/admin/products.php?action=delete&id=<?= $edit_sach['id'] ?>"
+                 class="btn btn-sm btn-outline-warning" style="border-radius:8px;"
+                 onclick="return confirm('Ẩn sách này khỏi cửa hàng?')">
+                <i class="bi bi-eye-slash me-1"></i>Ẩn sách
+              </a>
+            <?php else: ?>
+              <a href="/nhasach/admin/products.php?action=show&id=<?= $edit_sach['id'] ?>"
+                 class="btn btn-sm btn-outline-success" style="border-radius:8px;"
+                 onclick="return confirm('Hiện sách này trở lại?')">
+                <i class="bi bi-eye me-1"></i>Hiện sách
+              </a>
+            <?php endif; ?>
+            <?php if (!$edit_sach['da_nhap_hang']): ?>
+              <a href="/nhasach/admin/products.php?action=delete&id=<?= $edit_sach['id'] ?>"
+                 class="btn btn-sm btn-outline-danger ms-1" style="border-radius:8px;"
+                 onclick="return confirm('Xoá hẳn sách này? Không thể khôi phục!')">
+                <i class="bi bi-trash3 me-1"></i>Xoá hẳn
+              </a>
+            <?php endif; ?>
+          </span>
+        <?php endif; ?>
       </div>
     </div>
   </form>
@@ -341,7 +370,10 @@ $sachs = $sachs->fetchAll();
       </thead>
       <tbody>
         <?php foreach ($sachs as $s): ?>
-          <tr>
+          <tr style="cursor:pointer;"
+              onclick="window.location='/nhasach/admin/products.php?edit=<?= $s['id'] ?>'"
+              onmouseover="this.style.background='#fff8f3'"
+              onmouseout="this.style.background=''">
             <td>
               <?php if (!empty($s['hinh']) && file_exists('../uploads/' . $s['hinh'])): ?>
                 <img src="/nhasach/uploads/<?= htmlspecialchars($s['hinh']) ?>"
@@ -387,18 +419,14 @@ $sachs = $sachs->fetchAll();
               <?php endif; ?>
             </td>
             <td>
-              <div class="d-flex gap-1 flex-wrap">
-                <a href="/nhasach/admin/products.php?edit=<?= $s['id'] ?>"
-                   class="btn btn-sm btn-outline-primary" style="border-radius:6px;"
-                   title="Sửa">
-                  <i class="bi bi-pencil"></i>
-                </a>
+              <div class="d-flex gap-1 flex-wrap"
+                   onclick="event.stopPropagation()">
                 <?php if ($s['hien_trang']): ?>
                   <a href="/nhasach/admin/products.php?action=delete&id=<?= $s['id'] ?>"
-                     class="btn btn-sm btn-outline-danger" style="border-radius:6px;"
-                     title="<?= $s['da_nhap_hang'] ? 'Ẩn sách' : 'Xoá sách' ?>"
-                     onclick="return confirm('<?= $s['da_nhap_hang'] ? 'Ẩn sách này khỏi cửa hàng?' : 'Xoá hẳn sách này?' ?>')">
-                    <i class="bi <?= $s['da_nhap_hang'] ? 'bi-eye-slash' : 'bi-trash3' ?>"></i>
+                     class="btn btn-sm btn-outline-warning" style="border-radius:6px;"
+                     title="Ẩn sách"
+                     onclick="return confirm('Ẩn sách này khỏi cửa hàng?')">
+                    <i class="bi bi-eye-slash"></i>
                   </a>
                 <?php else: ?>
                   <a href="/nhasach/admin/products.php?action=show&id=<?= $s['id'] ?>"
