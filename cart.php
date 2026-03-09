@@ -10,24 +10,47 @@ if (!isset($_SESSION['khach_hang_id'])) {
     exit;
 }
 
+$kh_id = $_SESSION['khach_hang_id'];
+
+// ============================================================
+// HELPER: Sync giỏ hàng session → DB
+// ============================================================
+function syncGioHangDB($pdo, $kh_id, $gio_hang) {
+    $pdo->prepare("DELETE FROM gio_hang WHERE khach_hang_id=?")->execute([$kh_id]);
+    foreach ($gio_hang as $sach_id => $sl) {
+        if ($sl > 0) {
+            $pdo->prepare("INSERT INTO gio_hang (khach_hang_id, sach_id, so_luong) VALUES (?,?,?)")
+                ->execute([$kh_id, $sach_id, $sl]);
+        }
+    }
+}
+
+// ============================================================
+// Load giỏ hàng từ DB vào session
+// ============================================================
+$rows = $pdo->prepare("SELECT sach_id, so_luong FROM gio_hang WHERE khach_hang_id=?");
+$rows->execute([$kh_id]);
+$_SESSION['gio_hang'] = [];
+foreach ($rows->fetchAll() as $r) {
+    $_SESSION['gio_hang'][$r['sach_id']] = $r['so_luong'];
+}
+
 // ============================================================
 // XỬ LÝ HÀNH ĐỘNG GIỎ HÀNG
 // ============================================================
-$action   = $_REQUEST['action']   ?? '';
-$sach_id  = (int)($_REQUEST['sach_id'] ?? $_REQUEST['id'] ?? 0);
+$action  = $_REQUEST['action']  ?? '';
+$sach_id = (int)($_REQUEST['sach_id'] ?? $_REQUEST['id'] ?? 0);
 
 if ($action === 'add' && $sach_id > 0) {
-    // Kiểm tra sách tồn tại và còn hàng
     $stmt = $pdo->prepare("SELECT id, so_luong FROM sach WHERE id = ? AND hien_trang = 1");
     $stmt->execute([$sach_id]);
     $sach = $stmt->fetch();
-
     if ($sach) {
         $sl_them = max(1, (int)($_POST['so_luong'] ?? 1));
         $sl_hien = $_SESSION['gio_hang'][$sach_id] ?? 0;
-        // Không vượt quá tồn kho
-        $sl_moi = min($sl_hien + $sl_them, $sach['so_luong']);
+        $sl_moi  = min($sl_hien + $sl_them, $sach['so_luong']);
         $_SESSION['gio_hang'][$sach_id] = $sl_moi;
+        syncGioHangDB($pdo, $kh_id, $_SESSION['gio_hang']);
         $_SESSION['flash'] = ['type' => 'success', 'msg' => 'Đã thêm sách vào giỏ hàng!'];
     }
     header('Location: /nhasach/cart.php');
@@ -39,18 +62,19 @@ if ($action === 'update' && $sach_id > 0) {
     if ($so_luong <= 0) {
         unset($_SESSION['gio_hang'][$sach_id]);
     } else {
-        // Kiểm tra không vượt tồn kho
         $stmt = $pdo->prepare("SELECT so_luong FROM sach WHERE id = ?");
         $stmt->execute([$sach_id]);
         $sach = $stmt->fetch();
         $_SESSION['gio_hang'][$sach_id] = min($so_luong, $sach['so_luong']);
     }
+    syncGioHangDB($pdo, $kh_id, $_SESSION['gio_hang']);
     header('Location: /nhasach/cart.php');
     exit;
 }
 
 if ($action === 'remove' && $sach_id > 0) {
     unset($_SESSION['gio_hang'][$sach_id]);
+    syncGioHangDB($pdo, $kh_id, $_SESSION['gio_hang']);
     $_SESSION['flash'] = ['type' => 'info', 'msg' => 'Đã xoá sách khỏi giỏ hàng.'];
     header('Location: /nhasach/cart.php');
     exit;
@@ -58,20 +82,21 @@ if ($action === 'remove' && $sach_id > 0) {
 
 if ($action === 'clear') {
     $_SESSION['gio_hang'] = [];
+    syncGioHangDB($pdo, $kh_id, $_SESSION['gio_hang']);
     header('Location: /nhasach/cart.php');
     exit;
 }
 
 // ============================================================
-// LẤY DỮ LIỆU GIỎ HÀNG TỪ SESSION + DB
+// LẤY DỮ LIỆU GIỎ HÀNG
 // ============================================================
-$gio_hang   = $_SESSION['gio_hang'] ?? [];
-$items      = [];
-$tong_tien  = 0;
+$gio_hang  = $_SESSION['gio_hang'] ?? [];
+$items     = [];
+$tong_tien = 0;
 
 if (!empty($gio_hang)) {
-    $ids        = implode(',', array_map('intval', array_keys($gio_hang)));
-    $stmt       = $pdo->query("
+    $ids      = implode(',', array_map('intval', array_keys($gio_hang)));
+    $stmt     = $pdo->query("
         SELECT id, ten, hinh, so_luong AS ton_kho, ma_sach,
                ROUND(gia_nhap * (1 + ty_le_ln/100), 0) AS gia_ban
         FROM sach
@@ -80,12 +105,12 @@ if (!empty($gio_hang)) {
     $sachs_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($sachs_db as $s) {
-        $sl = min($gio_hang[$s['id']], $s['ton_kho']); // không vượt tồn kho
+        $sl = min($gio_hang[$s['id']], $s['ton_kho']);
         if ($sl > 0) {
             $thanh_tien = $s['gia_ban'] * $sl;
             $tong_tien += $thanh_tien;
-            $items[] = array_merge($s, ['so_luong' => $sl, 'thanh_tien' => $thanh_tien]);
-            $_SESSION['gio_hang'][$s['id']] = $sl; // đồng bộ lại
+            $items[]    = array_merge($s, ['so_luong' => $sl, 'thanh_tien' => $thanh_tien]);
+            $_SESSION['gio_hang'][$s['id']] = $sl;
         }
     }
 }
@@ -95,7 +120,6 @@ if (!empty($gio_hang)) {
   <h4 class="section-title mb-4">Giỏ hàng của tôi</h4>
 
   <?php if (empty($items)): ?>
-    <!-- Giỏ trống -->
     <div class="empty-state py-5">
       <i class="bi bi-cart3" style="font-size:4rem; color:#dee2e6; display:block; margin-bottom:16px;"></i>
       <h5 class="text-muted">Giỏ hàng của bạn đang trống</h5>
@@ -112,7 +136,6 @@ if (!empty($gio_hang)) {
       <div class="col-lg-8">
         <div style="background:#fff; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); overflow:hidden;">
 
-          <!-- Header bảng -->
           <div class="d-none d-md-flex px-4 py-3"
                style="background:#f8f9fa; border-bottom:1px solid #eee;
                       font-size:.78rem; text-transform:uppercase;
@@ -124,12 +147,10 @@ if (!empty($gio_hang)) {
             <div style="width:40px;"></div>
           </div>
 
-          <!-- Danh sách sách -->
           <?php foreach ($items as $item): ?>
             <div class="d-flex align-items-center gap-3 px-4 py-3"
                  style="border-bottom:1px solid #f0f0f0;">
 
-              <!-- Ảnh -->
               <a href="/nhasach/book.php?id=<?= $item['id'] ?>" style="flex-shrink:0;">
                 <?php if (!empty($item['hinh']) && file_exists("uploads/" . $item['hinh'])): ?>
                   <img src="/nhasach/uploads/<?= htmlspecialchars($item['hinh']) ?>"
@@ -143,7 +164,6 @@ if (!empty($gio_hang)) {
                 <?php endif; ?>
               </a>
 
-              <!-- Tên sách -->
               <div style="flex:2; min-width:0;">
                 <a href="/nhasach/book.php?id=<?= $item['id'] ?>"
                    class="fw-semibold text-truncate d-block"
@@ -154,18 +174,15 @@ if (!empty($gio_hang)) {
                 <?php if ($item['ton_kho'] <= 5): ?>
                   <div><small class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>Sắp hết hàng</small></div>
                 <?php endif; ?>
-                <!-- Đơn giá (mobile) -->
                 <div class="d-md-none mt-1" style="color:#e63946; font-weight:700; font-size:.95rem;">
                   <?= number_format($item['gia_ban'], 0, ',', '.') ?>₫
                 </div>
               </div>
 
-              <!-- Đơn giá (desktop) -->
               <div class="d-none d-md-block" style="flex:1; text-align:center; color:#666; font-size:.9rem;">
                 <?= number_format($item['gia_ban'], 0, ',', '.') ?>₫
               </div>
 
-              <!-- Số lượng -->
               <div style="flex:1; text-align:center;">
                 <form method="POST" action="/nhasach/cart.php"
                       class="d-flex align-items-center justify-content-center gap-1">
@@ -184,12 +201,10 @@ if (!empty($gio_hang)) {
                 </form>
               </div>
 
-              <!-- Thành tiền -->
               <div style="flex:1; text-align:right; font-weight:700; color:#e63946; font-size:.95rem;">
                 <?= number_format($item['thanh_tien'], 0, ',', '.') ?>₫
               </div>
 
-              <!-- Xoá -->
               <div style="width:40px; text-align:right;">
                 <a href="/nhasach/cart.php?action=remove&sach_id=<?= $item['id'] ?>"
                    class="text-muted"
@@ -203,7 +218,6 @@ if (!empty($gio_hang)) {
             </div>
           <?php endforeach; ?>
 
-          <!-- Footer bảng -->
           <div class="px-4 py-3 d-flex justify-content-between align-items-center"
                style="background:#fafafa;">
             <a href="/nhasach/books.php" class="text-muted" style="font-size:.88rem;">

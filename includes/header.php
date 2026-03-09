@@ -8,7 +8,11 @@ require_once __DIR__ . '/../config/database.php';
 
 // Đếm số sản phẩm trong giỏ hàng
 $so_san_pham_gio = 0;
-if (isset($_SESSION['gio_hang'])) {
+if (isset($_SESSION['khach_hang_id'])) {
+    $stmt_gio = $pdo->prepare("SELECT COALESCE(SUM(so_luong),0) FROM gio_hang WHERE khach_hang_id=?");
+    $stmt_gio->execute([$_SESSION['khach_hang_id']]);
+    $so_san_pham_gio = (int)$stmt_gio->fetchColumn();
+} elseif (isset($_SESSION['gio_hang'])) {
     foreach ($_SESSION['gio_hang'] as $sl) {
         $so_san_pham_gio += $sl;
     }
@@ -26,6 +30,7 @@ if (isset($_SESSION['gio_hang'])) {
   <!-- Bootstrap Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 
+  <link href="/nhasach/assets/css/style.css?v=2" rel="stylesheet">
   <style>
     body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; }
 

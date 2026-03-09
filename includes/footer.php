@@ -71,6 +71,60 @@
     }
   }, 3000);
 </script>
+  <!-- Toast thông báo giỏ hàng -->
+<div id="cart-toast" style="
+  position:fixed; bottom:24px; right:24px; z-index:9999;
+  background:#1a1a2e; color:#fff; padding:14px 20px;
+  border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,.2);
+  display:none; align-items:center; gap:12px; font-size:.9rem;
+  min-width:260px;">
+  <i class="bi bi-cart-check" style="color:#f4a261; font-size:1.2rem;"></i>
+  <span id="cart-toast-msg">Đã thêm vào giỏ hàng!</span>
+  <a href="/nhasach/cart.php" style="color:#f4a261; margin-left:auto; font-size:.82rem;">Xem giỏ</a>
+</div>
+
+<script>
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.btn-them-gio');
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  fetch('/nhasach/cart_ajax.php', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'id=' + id
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      // Cập nhật badge giỏ hàng
+      const badge = document.querySelector('.cart-badge');
+      if (badge) {
+        badge.textContent = data.tong;
+        badge.style.display = 'inline';
+      } else {
+        const icon = document.querySelector('.cart-icon');
+        if (icon) {
+          const b = document.createElement('span');
+          b.className = 'cart-badge';
+          b.textContent = data.tong;
+          icon.appendChild(b);
+        }
+      }
+
+      // Hiện toast
+      const toast = document.getElementById('cart-toast');
+      const msg   = document.getElementById('cart-toast-msg');
+      msg.textContent = '✓ Đã thêm: ' + data.ten;
+      toast.style.display = 'flex';
+      clearTimeout(window._cartToast);
+      window._cartToast = setTimeout(() => toast.style.display = 'none', 3000);
+    } else {
+      alert(data.msg || 'Có lỗi xảy ra!');
+    }
+  });
+});
+</script>
 <?php ob_end_flush(); ?>
 </body>
 </html>

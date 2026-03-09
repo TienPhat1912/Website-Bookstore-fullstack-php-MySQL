@@ -33,6 +33,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Đăng nhập thành công
             $_SESSION['khach_hang_id']  = $kh['id'];
             $_SESSION['khach_hang_ten'] = $kh['ho_ten'];
+            // Merge giỏ hàng session vào DB
+if (!empty($_SESSION['gio_hang'])) {
+    foreach ($_SESSION['gio_hang'] as $sach_id => $sl) {
+        $exist = $pdo->prepare("SELECT id, so_luong FROM gio_hang WHERE khach_hang_id=? AND sach_id=?");
+        $exist->execute([$kh['id'], $sach_id]);
+        $row = $exist->fetch();
+        if ($row) {
+            $pdo->prepare("UPDATE gio_hang SET so_luong=so_luong+? WHERE id=?")->execute([$sl, $row['id']]);
+        } else {
+            $pdo->prepare("INSERT INTO gio_hang (khach_hang_id, sach_id, so_luong) VALUES (?,?,?)")->execute([$kh['id'], $sach_id, $sl]);
+        }
+    }
+    unset($_SESSION['gio_hang']); // xoá session sau khi merge
+}
 
             $_SESSION['flash'] = [
                 'type' => 'success',

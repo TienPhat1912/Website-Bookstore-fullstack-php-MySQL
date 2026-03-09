@@ -90,7 +90,7 @@
   }
 
   // Gọi khi đổi tỉnh
-  window['loadPhuong'] = window['loadPhuong'] || {};
+  
   window['loadPhuong_' + PREFIX] = function() {
     const tinh = document.getElementById('sel_tinh_' + PREFIX).value;
     getDiaChi(data => fillPhuong(data, tinh));

@@ -3,18 +3,22 @@
 // Yêu cầu biến $sach đã được set trước khi include
 // $sach cần có: id, ten, tac_gia, hinh, gia_ban, so_luong, ten_the_loai (nếu có)
 ?>
-<div class="col-6 col-md-4 col-lg-3">
-  <div class="card-sach h-100">
+<div class="col-lg-3 col-md-4 col-sm-6 d-flex">
+    <div class="card-sach w-100">
 
     <!-- Ảnh bìa -->
-    <a href="/nhasach/book.php?id=<?= $sach['id'] ?>" class="card-sach-img-wrap">
+    <a href="/nhasach/book.php?id=<?= $sach['id'] ?>" 
+   class="card-sach-img-wrap"
+   style="display:block; height:200px; overflow:hidden;">
       <?php if (!empty($sach['hinh']) && file_exists("uploads/" . $sach['hinh'])): ?>
         <img src="/nhasach/uploads/<?= htmlspecialchars($sach['hinh']) ?>"
-             alt="<?= htmlspecialchars($sach['ten']) ?>"
-             class="card-sach-img">
+     alt="<?= htmlspecialchars($sach['ten']) ?>"
+     class="card-sach-img"
+     style="width:100%; height:100%; object-fit:contain; object-position:center;">
       <?php else: ?>
         <div class="card-sach-no-img">
           <i class="bi bi-book"></i>
+          <span>Chưa có bìa</span>
         </div>
       <?php endif; ?>
 
@@ -47,12 +51,12 @@
           <?= number_format($sach['gia_ban'], 0, ',', '.') ?>₫
         </span>
         <?php if ($sach['so_luong'] > 0): ?>
-          <a href="/nhasach/cart.php?action=add&id=<?= $sach['id'] ?>"
-             class="card-sach-btn-cart"
-             title="Thêm vào giỏ">
-            <i class="bi bi-cart-plus"></i>
-          </a>
-        <?php else: ?>
+          <button class="card-sach-btn-cart btn-them-gio"
+          data-id="<?= $sach['id'] ?>"
+          title="Thêm vào giỏ">
+        <i class="bi bi-cart-plus"></i>
+  </button>
+<?php else: ?>
           <span class="card-sach-btn-disabled" title="Hết hàng">
             <i class="bi bi-cart-x"></i>
           </span>
