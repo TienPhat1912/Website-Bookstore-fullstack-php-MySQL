@@ -147,26 +147,24 @@ $sach_lien_quan = $stmt->fetchAll();
       <!-- THÊM VÀO GIỎ -->
       <?php if ($sach['so_luong'] > 0): ?>
         <?php if (isset($_SESSION['khach_hang_id'])): ?>
-          <form action="/nhasach/cart.php" method="POST" class="d-flex align-items-center gap-3 flex-wrap mb-3">
-            <input type="hidden" name="action" value="add">
-            <input type="hidden" name="sach_id" value="<?= $sach['id'] ?>">
+  <div class="d-flex align-items-center gap-3 flex-wrap mb-3">
+    <div class="d-flex align-items-center gap-2">
+      <label class="text-muted" style="font-size:.9rem;">Số lượng:</label>
+      <div class="d-flex align-items-center gap-1">
+        <button type="button" class="cart-qty-btn" onclick="changeQty(-1)">−</button>
+        <input type="number" id="qty-input" class="qty-input"
+               value="1" min="1" max="<?= $sach['so_luong'] ?>">
+        <button type="button" class="cart-qty-btn" onclick="changeQty(1)">+</button>
+      </div>
+    </div>
 
-            <div class="d-flex align-items-center gap-2">
-              <label class="text-muted" style="font-size:.9rem;">Số lượng:</label>
-              <div class="d-flex align-items-center gap-1">
-                <button type="button" class="cart-qty-btn" onclick="changeQty(-1)">−</button>
-                <input type="number" name="so_luong" id="qty-input" class="qty-input"
-                       value="1" min="1" max="<?= $sach['so_luong'] ?>">
-                <button type="button" class="cart-qty-btn" onclick="changeQty(1)">+</button>
-              </div>
-            </div>
-
-            <button type="submit" class="btn px-4 py-2 fw-semibold"
-                    style="background:#f4a261; color:#fff; border:none; border-radius:25px;">
-              <i class="bi bi-cart-plus me-2"></i>Thêm vào giỏ
-            </button>
-          </form>
-        <?php else: ?>
+    <button type="button" class="btn px-4 py-2 fw-semibold "
+            data-id="<?= $sach['id'] ?>" id="btn-add-cart"
+            style="background:#f4a261; color:#fff; border:none; border-radius:25px;">
+      <i class="bi bi-cart-plus me-2"></i>Thêm vào giỏ
+    </button>
+  </div>
+<?php else: ?>
           <div class="alert alert-warning d-flex align-items-center gap-3 mb-3"
                style="border-radius:12px; max-width:460px;">
             <i class="bi bi-lock fs-4"></i>
@@ -226,9 +224,43 @@ $sach_lien_quan = $stmt->fetchAll();
 function changeQty(delta) {
   const input = document.getElementById('qty-input');
   const max   = parseInt(input.max);
-  const val   = parseInt(input.value) + delta;
-  input.value = Math.min(max, Math.max(1, val));
+  input.value = Math.min(max, Math.max(1, parseInt(input.value) + delta));
 }
-</script>
 
+document.getElementById('btn-add-cart').addEventListener('click', function() {
+  const id = this.dataset.id;
+  const sl = document.getElementById('qty-input').value;
+
+  fetch('/nhasach/cart_ajax.php', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'id=' + id + '&so_luong=' + sl
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      const badge = document.querySelector('.cart-badge');
+      if (badge) {
+        badge.textContent = data.tong;
+      } else {
+        const icon = document.querySelector('.cart-icon');
+        if (icon) {
+          const b = document.createElement('span');
+          b.className = 'cart-badge';
+          b.textContent = data.tong;
+          icon.appendChild(b);
+        }
+      }
+      const toast = document.getElementById('cart-toast');
+      const msg   = document.getElementById('cart-toast-msg');
+      msg.textContent = '✓ Đã thêm: ' + data.ten;
+      toast.style.display = 'flex';
+      clearTimeout(window._cartToast);
+      window._cartToast = setTimeout(() => toast.style.display = 'none', 3000);
+    } else {
+      alert(data.msg || 'Có lỗi xảy ra!');
+    }
+  });
+});
+</script>
 <?php require_once 'includes/footer.php'; ?>
