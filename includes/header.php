@@ -92,6 +92,18 @@ if (isset($_SESSION['khach_hang_id'])) {
 
     /* Flash message */
     .flash-message { position: fixed; top: 70px; right: 20px; z-index: 9999; min-width: 300px; }
+    .suggest-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px; cursor:pointer; border-bottom:1px solid #f5f5f5;
+  text-decoration:none; color:#1a1a2e;
+}
+.suggest-item:hover { background:#fff8f3; }
+.suggest-item img { width:36px; height:48px; object-fit:contain; border-radius:4px; }
+.suggest-item-no-img { width:36px; height:48px; background:#f0f0f0; border-radius:4px;
+  display:flex; align-items:center; justify-content:center; color:#aaa; font-size:.9rem; }
+.suggest-title { font-size:.88rem; font-weight:600; }
+.suggest-author { font-size:.78rem; color:#888; }
+.suggest-price { font-size:.82rem; color:#f4a261; font-weight:600; margin-left:auto; white-space:nowrap; }
   </style>
 </head>
 <body>
@@ -113,15 +125,21 @@ if (isset($_SESSION['khach_hang_id'])) {
     <div class="collapse navbar-collapse" id="navMenu">
 
       <!-- Thanh tìm kiếm -->
-      <form class="search-form d-flex mx-auto my-2 my-lg-0" style="width: 380px;"
-            action="/nhasach/books.php" method="GET">
-        <input class="form-control" type="search" name="search"
-               placeholder="Tìm sách, tác giả..."
-               value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
-        <button class="btn btn-search" type="submit">
-          <i class="bi bi-search"></i>
-        </button>
-      </form>
+      <form class="search-form d-flex mx-auto my-2 my-lg-0" style="width:380px; position:relative;"
+      action="/nhasach/books.php" method="GET">
+  <input class="form-control" type="search" name="search" id="search-input"
+         placeholder="Tìm sách, tác giả..."
+         value="<?= htmlspecialchars($_GET['search'] ?? '') ?>"
+         autocomplete="off">
+  <button class="btn btn-search" type="submit">
+    <i class="bi bi-search"></i>
+  </button>
+  <!-- Dropdown gợi ý -->
+  <div id="search-suggest" style="
+    display:none; position:absolute; top:100%; left:0; right:0; z-index:9999;
+    background:#fff; border-radius:0 0 12px 12px;
+    box-shadow:0 8px 24px rgba(0,0,0,.15); overflow:hidden;"></div>
+</form>
 
       <!-- Menu chính -->
       <ul class="navbar-nav me-3">

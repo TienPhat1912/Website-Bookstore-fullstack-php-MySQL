@@ -124,6 +124,45 @@ document.addEventListener('click', function(e) {
     }
   });
 });
+(function() {
+  const input   = document.getElementById('search-input');
+  const suggest = document.getElementById('search-suggest');
+  if (!input) return;
+
+  let timer;
+  input.addEventListener('input', function() {
+    clearTimeout(timer);
+    const q = this.value.trim();
+    if (q.length < 2) { suggest.style.display = 'none'; return; }
+
+    timer = setTimeout(() => {
+      fetch('/nhasach/search_ajax.php?q=' + encodeURIComponent(q))
+        .then(r => r.json())
+        .then(data => {
+          if (!data.length) { suggest.style.display = 'none'; return; }
+          suggest.innerHTML = data.map(s => `
+            <a href="/nhasach/book.php?id=${s.id}" class="suggest-item">
+              ${s.hinh
+                ? `<img src="/nhasach/uploads/${s.hinh}" alt="">`
+                : `<div class="suggest-item-no-img"><i class="bi bi-book"></i></div>`}
+              <div>
+                <div class="suggest-title">${s.ten}</div>
+                <div class="suggest-author">${s.tac_gia || ''}</div>
+              </div>
+              <span class="suggest-price">${parseInt(s.gia_ban).toLocaleString('vi-VN')}₫</span>
+            </a>
+          `).join('');
+          suggest.style.display = 'block';
+        });
+    }, 300);
+  });
+
+  // Ẩn khi click ra ngoài
+  document.addEventListener('click', function(e) {
+    if (!input.contains(e.target) && !suggest.contains(e.target))
+      suggest.style.display = 'none';
+  });
+})();
 </script>
 <?php ob_end_flush(); ?>
 </body>

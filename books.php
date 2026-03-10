@@ -59,11 +59,9 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $sachs = $stmt->fetchAll();
 
-$the_loais = $pdo->query("SELECT * FROM the_loai WHERE trang_thai = 1 ORDER BY ten")->fetchAll();
+$the_loais = $pdo->query("SELECT * FROM the_loai WHERE trang_thai = 1")->fetchAll();
 
-$gia_max_db = (int)$pdo->query("SELECT COALESCE(MAX(ROUND(gia_nhap*(1+ty_le_ln/100),0)),1000000) FROM sach WHERE hien_trang=1")->fetchColumn();
-$gia_max_db = ceil($gia_max_db / 10000) * 10000;
-
+$gia_max_db = 5000000;
 function buildUrl(array $override = []): string {
     $p = array_merge($_GET, $override);
     unset($p['trang']);
