@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th3 06, 2026 lúc 03:13 PM
+-- Thời gian đã tạo: Th3 10, 2026 lúc 02:05 PM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -57,6 +57,18 @@ CREATE TABLE `chi_tiet_don_hang` (
   `gia_ban_luc_dat` decimal(15,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Đang đổ dữ liệu cho bảng `chi_tiet_don_hang`
+--
+
+INSERT INTO `chi_tiet_don_hang` (`id`, `don_hang_id`, `sach_id`, `so_luong`, `gia_ban_luc_dat`) VALUES
+(1, 1, 6, 2, 100500.00),
+(2, 2, 1, 1, 87100.00),
+(3, 3, 4, 1, 50700.00),
+(4, 4, 1, 1, 87100.00),
+(5, 5, 4, 1, 50700.00),
+(6, 5, 5, 1, 90000.00);
+
 -- --------------------------------------------------------
 
 --
@@ -70,6 +82,19 @@ CREATE TABLE `chi_tiet_nhap` (
   `so_luong` int(11) NOT NULL DEFAULT 0,
   `don_gia` decimal(15,0) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `chi_tiet_nhap`
+--
+
+INSERT INTO `chi_tiet_nhap` (`id`, `phieu_nhap_id`, `sach_id`, `so_luong`, `don_gia`) VALUES
+(1, 1, 6, 100, 75000),
+(2, 1, 7, 100, 36000),
+(3, 1, 1, 100, 67000),
+(4, 2, 8, 100, 29000),
+(5, 2, 3, 100, 69000),
+(6, 2, 4, 100, 39000),
+(7, 2, 5, 100, 72000);
 
 -- --------------------------------------------------------
 
@@ -92,6 +117,42 @@ CREATE TABLE `don_hang` (
   `trang_thai` enum('cho_xu_ly','da_xac_nhan','da_giao','da_huy') NOT NULL DEFAULT 'cho_xu_ly',
   `ghi_chu` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `don_hang`
+--
+
+INSERT INTO `don_hang` (`id`, `ma_don`, `khach_hang_id`, `ngay_dat`, `ten_nguoi_nhan`, `so_dien_thoai`, `dia_chi`, `phuong_xa`, `tinh_tp`, `phuong_thuc_tt`, `tong_tien`, `trang_thai`, `ghi_chu`) VALUES
+(1, 'DH2026030708212157', 1, '2026-03-07 14:21:21', 'Trần Tiến Phát', '0392986719', '126B Mai Chí Thọ', 'Phường Bình Trưng Tây', 'Thành phố Hồ Chí Minh', 'chuyen_khoan', 201000.00, 'da_giao', NULL),
+(2, 'DH2026030709565565', 1, '2026-03-07 15:56:55', 'Trần Tiến Phát', '0392986719', '126B Mai Chí Thọ', 'Phường Bình Trưng Tây', 'Thành phố Hồ Chí Minh', 'tien_mat', 87100.00, 'cho_xu_ly', NULL),
+(3, 'DH2026030914350912', 1, '2026-03-09 20:35:09', 'Trần Tiến Phát', '0392986719', '126B Mai Chí Thọ', 'Phường Bình Trưng Tây', 'Thành phố Hồ Chí Minh', 'tien_mat', 50700.00, 'cho_xu_ly', NULL),
+(4, 'DH2026030914483428', 1, '2026-03-09 20:48:34', 'Trần Tiến Phát', '0392986719', '126B Mai Chí Thọ', 'Phường Bình Trưng Tây', 'Thành phố Hồ Chí Minh', 'tien_mat', 87100.00, 'cho_xu_ly', NULL),
+(5, 'DH2026030915331746', 1, '2026-03-09 21:33:17', 'Trần Tiến Phát', '0392986719', '126B Mai Chí Thọ', 'Phường Bình Trưng Tây', 'Thành phố Hồ Chí Minh', 'tien_mat', 140700.00, 'cho_xu_ly', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `gio_hang`
+--
+
+CREATE TABLE `gio_hang` (
+  `id` int(11) NOT NULL,
+  `khach_hang_id` int(11) NOT NULL,
+  `sach_id` int(11) NOT NULL,
+  `so_luong` int(11) NOT NULL DEFAULT 1,
+  `ngay_them` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `gio_hang`
+--
+
+INSERT INTO `gio_hang` (`id`, `khach_hang_id`, `sach_id`, `so_luong`, `ngay_them`) VALUES
+(84, 1, 4, 1, '2026-03-10 13:15:08'),
+(85, 1, 5, 1, '2026-03-10 13:15:08'),
+(86, 1, 6, 1, '2026-03-10 13:15:08'),
+(87, 1, 7, 1, '2026-03-10 13:15:08'),
+(88, 1, 8, 1, '2026-03-10 13:15:08');
 
 -- --------------------------------------------------------
 
@@ -118,7 +179,7 @@ CREATE TABLE `khach_hang` (
 --
 
 INSERT INTO `khach_hang` (`id`, `ho_ten`, `email`, `mat_khau`, `so_dien_thoai`, `dia_chi`, `phuong_xa`, `tinh_tp`, `bi_khoa`, `trang_thai`, `ngay_tao`) VALUES
-(1, 'Trần Tiến Phát', 'tienphatt1912@gmail.com', '$2y$10$YDppB2pIzJgKHbGa2HOSWuGqtzrQmygyMkI.I7jIbwZKpc9TTUfTS', '0392986719', '126B Mai Chí Thọ', 'An phú', 'TP. Hồ Chí Minh', 0, 1, '2026-03-06 19:27:22'),
+(1, 'Trần Tiến Phát', 'tienphatt1912@gmail.com', '$2y$10$YDppB2pIzJgKHbGa2HOSWuGqtzrQmygyMkI.I7jIbwZKpc9TTUfTS', '0392986719', '126B Mai Chí Thọ', 'Phường Bình Trưng Tây', 'Thành phố Hồ Chí Minh', 0, 1, '2026-03-06 19:27:22'),
 (2, 'Cao Thái Phương Thanh', 'example@gmail.com', '$2y$10$GD975fsJBOS9AM9qFgXzHuYHDuTj4Xsigzrh9tICjxb8YJ.CxtI4O', '123456789', '273, An Dương Vương', 'Phường 3', 'TP. Hồ Chí Minh', 0, 1, '2026-03-06 19:27:22'),
 (3, 'Lê Nguyễn Anh Bảo', 'lebao09@gmail.com', '$2y$10$tbLNAj4U2pBKfMOzCy9dCeruNzHvYvzdKB1BVM2Y3N4N5Yuw3bC42', '0909090099', '1, Võ Văn Ngân', 'Phường Linh Trung', 'Thành phố Hồ Chí Minh', 0, 1, '2026-03-06 19:27:22');
 
@@ -137,6 +198,14 @@ CREATE TABLE `phieu_nhap` (
   `nguoi_tao` int(11) DEFAULT NULL,
   `ngay_tao` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `phieu_nhap`
+--
+
+INSERT INTO `phieu_nhap` (`id`, `ma_phieu`, `ngay_nhap`, `ghi_chu`, `trang_thai`, `nguoi_tao`, `ngay_tao`) VALUES
+(1, 'PN260307081255', '0000-00-00', '', 'done', NULL, '2026-03-07 14:12:55'),
+(2, 'PN260307100153', '0000-00-00', '', 'done', NULL, '2026-03-07 16:01:53');
 
 -- --------------------------------------------------------
 
@@ -167,14 +236,13 @@ CREATE TABLE `sach` (
 --
 
 INSERT INTO `sach` (`id`, `ma_sach`, `ten`, `tac_gia`, `the_loai_id`, `nha_xb`, `mo_ta`, `don_vi_tinh`, `hinh`, `so_luong`, `gia_nhap`, `ty_le_ln`, `hien_trang`, `da_nhap_hang`, `ngay_tao`) VALUES
-(1, 'S001', 'Đắc Nhân Tâm', 'Dale Carnegie', 4, 'NXB Tổng hợp TP.HCM', 'Nghệ thuật giao tiếp và thuyết phục', 'cuốn', 'dac-nhan-tam.jpg', 0, 0.00, 30.00, 0, 0, '2026-03-06 14:31:07'),
-(2, 'S002', 'Nhà Giả Kim', 'Paulo Coelho', 2, 'NXB Hội Nhà Văn', 'Hành trình tìm kiếm ý nghĩa cuộc đời', 'cuốn', 'nha-gia-kim.jpg', 0, 0.00, 25.00, 0, 0, '2026-03-06 14:31:07'),
-(3, 'S003', 'Sapiens: Lược Sử Loài Người', 'Yuval Noah Harari', 7, 'NXB Tri Thức', 'Lịch sử tiến hoá của loài người', 'cuốn', 'sapiens.jpg', 0, 0.00, 28.00, 0, 0, '2026-03-06 14:31:07'),
-(4, 'S004', 'Tư Duy Nhanh Và Chậm', 'Daniel Kahneman', 8, 'NXB Thế Giới', 'Khám phá hai hệ thống tư duy của não bộ', 'cuốn', 'tu-duy.jpg', 0, 0.00, 30.00, 0, 0, '2026-03-06 14:31:07'),
-(5, 'S005', 'Tuổi Trẻ Đáng Giá Bao Nhiêu', 'Rosie Nguyễn', 4, 'NXB Hội Nhà Văn', 'Sách truyền cảm hứng cho giới trẻ Việt Nam', 'cuốn', 'tuoi-tre.jpg', 0, 0.00, 25.00, 0, 0, '2026-03-06 14:31:07'),
-(6, 'S006', 'Clean Code', 'Robert C. Martin', 5, 'NXB Lao Động', 'Hướng dẫn viết code sạch chuyên nghiệp', 'cuốn', 'clean-code.jpg', 0, 0.00, 35.00, 0, 0, '2026-03-06 14:31:07'),
-(7, 'S007', 'Doraemon - Tập 1', 'Fujiko F. Fujio', 6, 'NXB Kim Đồng', 'Truyện tranh thiếu nhi nổi tiếng Nhật Bản', 'cuốn', 'doraemon.jpg', 0, 0.00, 20.00, 0, 0, '2026-03-06 14:31:07'),
-(8, 'S008', 'Khởi Nghiệp Tinh Gọn', 'Eric Ries', 3, 'NXB Lao Động', 'Phương pháp Lean Startup cho doanh nghiệp', 'cuốn', 'khoi-nghiep.jpg', 0, 0.00, 30.00, 0, 0, '2026-03-06 14:31:07');
+(1, 'S001', 'Đắc Nhân Tâm', 'Dale Carnegie', 4, 'NXB Tổng hợp TP.HCM', 'Nghệ thuật giao tiếp và thuyết phục', 'cuốn', 'sach_1772867749_220.jpg', 98, 67000.00, 30.00, 1, 1, '2026-03-06 14:31:07'),
+(3, 'S003', 'Sapiens: Lược Sử Loài Người', 'Yuval Noah Harari', 7, 'NXB Tri Thức', 'Lịch sử tiến hoá của loài người', 'cuốn', 'sach_1772894477_392.jpg', 100, 69000.00, 28.00, 1, 1, '2026-03-06 14:31:07'),
+(4, 'S004', 'Tư Duy Nhanh Và Chậm', 'Daniel Kahneman', 8, 'NXB Thế Giới', 'Khám phá hai hệ thống tư duy của não bộ', 'cuốn', 'sach_1772894501_775.jpg', 98, 39000.00, 30.00, 1, 1, '2026-03-06 14:31:07'),
+(5, 'S005', 'Tuổi Trẻ Đáng Giá Bao Nhiêu', 'Rosie Nguyễn', 4, 'NXB Hội Nhà Văn', 'Sách truyền cảm hứng cho giới trẻ Việt Nam', 'cuốn', 'sach_1772894510_567.jpg', 99, 72000.00, 25.00, 1, 1, '2026-03-06 14:31:07'),
+(6, 'S006', 'Clean Code', 'Robert C. Martin', 5, 'NXB Lao Động', 'Hướng dẫn viết code sạch chuyên nghiệp', 'cuốn', 'sach_1772867804_490.jpg', 98, 75000.00, 34.00, 1, 1, '2026-03-06 14:31:07'),
+(7, 'S007', 'Doraemon - Tập 1', 'Fujiko F. Fujio', 6, 'NXB Kim Đồng', 'Truyện tranh thiếu nhi nổi tiếng Nhật Bản', 'cuốn', 'sach_1772868008_431.jpg', 100, 36000.00, 20.00, 1, 1, '2026-03-06 14:31:07'),
+(8, 'S008', 'Khởi Nghiệp Tinh Gọn', 'Eric Ries', 3, 'NXB Lao Động', 'Phương pháp Lean Startup cho doanh nghiệp', 'cuốn', 'sach_1772894520_818.jpg', 100, 29000.00, 30.00, 1, 1, '2026-03-06 14:31:07');
 
 -- --------------------------------------------------------
 
@@ -317,6 +385,14 @@ ALTER TABLE `don_hang`
   ADD KEY `idx_don_hang_phuong` (`phuong_xa`);
 
 --
+-- Chỉ mục cho bảng `gio_hang`
+--
+ALTER TABLE `gio_hang`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_kh_sach` (`khach_hang_id`,`sach_id`),
+  ADD KEY `sach_id` (`sach_id`);
+
+--
 -- Chỉ mục cho bảng `khach_hang`
 --
 ALTER TABLE `khach_hang`
@@ -362,19 +438,25 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT cho bảng `chi_tiet_don_hang`
 --
 ALTER TABLE `chi_tiet_don_hang`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT cho bảng `chi_tiet_nhap`
 --
 ALTER TABLE `chi_tiet_nhap`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT cho bảng `don_hang`
 --
 ALTER TABLE `don_hang`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT cho bảng `gio_hang`
+--
+ALTER TABLE `gio_hang`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=89;
 
 --
 -- AUTO_INCREMENT cho bảng `khach_hang`
@@ -386,7 +468,7 @@ ALTER TABLE `khach_hang`
 -- AUTO_INCREMENT cho bảng `phieu_nhap`
 --
 ALTER TABLE `phieu_nhap`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT cho bảng `sach`
@@ -423,6 +505,13 @@ ALTER TABLE `chi_tiet_nhap`
 --
 ALTER TABLE `don_hang`
   ADD CONSTRAINT `don_hang_ibfk_1` FOREIGN KEY (`khach_hang_id`) REFERENCES `khach_hang` (`id`);
+
+--
+-- Các ràng buộc cho bảng `gio_hang`
+--
+ALTER TABLE `gio_hang`
+  ADD CONSTRAINT `gio_hang_ibfk_1` FOREIGN KEY (`khach_hang_id`) REFERENCES `khach_hang` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `gio_hang_ibfk_2` FOREIGN KEY (`sach_id`) REFERENCES `sach` (`id`) ON DELETE CASCADE;
 
 --
 -- Các ràng buộc cho bảng `phieu_nhap`
