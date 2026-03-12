@@ -50,7 +50,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
 if (isset($_GET['id'])) {
     $id = (int)$_GET['id'];
     $don = $pdo->prepare("
-        SELECT dh.*, kh.ho_ten, kh.email, kh.sdt
+        SELECT dh.*, kh.ho_ten, kh.email, kh.so_dien_thoai
         FROM don_hang dh
         JOIN khach_hang kh ON kh.id = dh.khach_hang_id
         WHERE dh.id = ?
