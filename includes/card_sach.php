@@ -10,12 +10,17 @@
     <a href="/nhasach/book.php?id=<?= $sach['id'] ?>" 
    class="card-sach-img-wrap"
    style="display:block; height:200px; overflow:hidden;">
-      <?php if (!empty($sach['hinh']) && file_exists("uploads/" . $sach['hinh'])): ?>
-        <img src="/nhasach/uploads/<?= htmlspecialchars($sach['hinh']) ?>"
+      <?php if (!empty($sach['hinh'])): ?>
+<?php
+$is_url  = str_starts_with($sach['hinh'], 'http');
+$img_src = $is_url ? $sach['hinh'] : '/nhasach/uploads/' . $sach['hinh'];
+?>
+<img src="<?= htmlspecialchars($img_src) ?>"
      alt="<?= htmlspecialchars($sach['ten']) ?>"
      class="card-sach-img"
-     style="width:100%; height:100%; object-fit:contain; object-position:center;">
-      <?php else: ?>
+     style="width:100%; height:100%; object-fit:contain; object-position:center;"
+     onerror="this.style.display='none'">
+<?php else: ?>
         <div class="card-sach-no-img">
           <i class="bi bi-book"></i>
           <span>Chưa có bìa</span>

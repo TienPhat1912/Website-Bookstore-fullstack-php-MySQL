@@ -128,7 +128,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->commit();
 
-            // Xoá giỏ hàng
+            // Xoá giỏ hàng — cả DB lẫn session
+            $pdo->prepare("DELETE FROM gio_hang WHERE khach_hang_id = ?")->execute([$kh['id']]);
             unset($_SESSION['gio_hang']);
 
             // Lưu mã đơn để hiển thị trang xác nhận

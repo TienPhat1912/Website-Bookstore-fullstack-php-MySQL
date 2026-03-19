@@ -19,11 +19,9 @@ if ($action === 'delete' && isset($_GET['id'])) {
 
     if ($sach) {
         if ($sach['da_nhap_hang']) {
-            // Đã từng nhập hàng → ẩn (soft delete)
             $pdo->prepare("UPDATE sach SET hien_trang = 0 WHERE id = ?")->execute([$id]);
             $_SESSION['flash'] = ['type' => 'warning', 'msg' => 'Sách đã được ẩn khỏi cửa hàng (đã từng nhập hàng).'];
         } else {
-            // Chưa nhập hàng → xoá hẳn
             if (!empty($sach['hinh']) && file_exists('../uploads/' . $sach['hinh'])) {
                 unlink('../uploads/' . $sach['hinh']);
             }
@@ -35,7 +33,7 @@ if ($action === 'delete' && isset($_GET['id'])) {
     exit;
 }
 
-// ---- HIỆN LẠI (bỏ ẩn) ----
+// ---- HIỆN LẠI ----
 if ($action === 'show' && isset($_GET['id'])) {
     $pdo->prepare("UPDATE sach SET hien_trang = 1 WHERE id = ?")->execute([(int)$_GET['id']]);
     $_SESSION['flash'] = ['type' => 'success', 'msg' => 'Đã hiện sách trở lại.'];
@@ -43,7 +41,7 @@ if ($action === 'show' && isset($_GET['id'])) {
     exit;
 }
 
-// ---- THÊM / SỬA ----
+// ---- SỬA ----
 $edit_sach = null;
 $errors    = [];
 $old       = [];
@@ -54,168 +52,158 @@ if (isset($_GET['edit'])) {
     $edit_sach = $stmt->fetch();
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['create', 'update'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update') {
     $old = $_POST;
 
-    $ma_sach     = trim($_POST['ma_sach']    ?? '');
-    $ten         = trim($_POST['ten']        ?? '');
-    $tac_gia     = trim($_POST['tac_gia']    ?? '');
+    $ten         = trim($_POST['ten']          ?? '');
+    $tac_gia     = trim($_POST['tac_gia']      ?? '');
     $the_loai_id = (int)($_POST['the_loai_id'] ?? 0);
-    $nha_xb      = trim($_POST['nha_xb']     ?? '');
-    $mo_ta       = trim($_POST['mo_ta']      ?? '');
-    $don_vi      = trim($_POST['don_vi_tinh']?? 'cuốn');
-    $ty_le_ln    = (float)($_POST['ty_le_ln'] ?? 0);
-    $edit_id     = (int)($_POST['edit_id']   ?? 0);
+    $nha_xb      = trim($_POST['nha_xb']       ?? '');
+    $mo_ta       = trim($_POST['mo_ta']        ?? '');
+    $don_vi      = trim($_POST['don_vi_tinh']  ?? 'cuon');
+    $ty_le_ln    = (float)($_POST['ty_le_ln']  ?? 0);
+    $edit_id     = (int)($_POST['edit_id']     ?? 0);
 
-    // Validate
-    if (empty($ma_sach))      $errors['ma_sach']     = 'Vui lòng nhập mã sách.';
-    if (empty($ten))          $errors['ten']         = 'Vui lòng nhập tên sách.';
-    if ($the_loai_id <= 0)    $errors['the_loai_id'] = 'Vui lòng chọn thể loại.';
-    if ($ty_le_ln < 0)        $errors['ty_le_ln']    = 'Tỷ lệ lợi nhuận không hợp lệ.';
+    if (empty($ten))       $errors['ten']         = 'Vui long nhap ten sach.';
+    if ($the_loai_id <= 0) $errors['the_loai_id'] = 'Vui long chon the loai.';
+    if ($ty_le_ln < 0)     $errors['ty_le_ln']    = 'Ty le loi nhuan khong hop le.';
 
-    // Kiểm tra mã sách trùng
-    if (empty($errors['ma_sach'])) {
-        $stmt = $pdo->prepare("SELECT id FROM sach WHERE ma_sach = ? AND id != ?");
-        $stmt->execute([$ma_sach, $edit_id]);
-        if ($stmt->fetch()) $errors['ma_sach'] = 'Mã sách đã tồn tại.';
-    }
+    // Upload anh
+    $hinh     = $old['hinh_cu'] ?? '';
+    $xoa_hinh = isset($_POST['xoa_hinh']) && $_POST['xoa_hinh'] == '1';
 
-    // Upload ảnh
-    $hinh = $old['hinh_cu'] ?? '';
     if (!empty($_FILES['hinh']['name'])) {
-        $ext      = strtolower(pathinfo($_FILES['hinh']['name'], PATHINFO_EXTENSION));
-        $allowed  = ['jpg','jpeg','png','webp'];
+        $ext     = strtolower(pathinfo($_FILES['hinh']['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg','jpeg','png','webp'];
         if (!in_array($ext, $allowed)) {
-            $errors['hinh'] = 'Chỉ chấp nhận file jpg, jpeg, png, webp.';
+            $errors['hinh'] = 'Chi chap nhan file jpg, jpeg, png, webp.';
         } elseif ($_FILES['hinh']['size'] > 2 * 1024 * 1024) {
-            $errors['hinh'] = 'Ảnh tối đa 2MB.';
+            $errors['hinh'] = 'Anh toi da 2MB.';
         } else {
-            $ten_file = 'sach_' . time() . '_' . rand(100,999) . '.' . $ext;
+            $ten_file   = 'sach_' . time() . '_' . rand(100,999) . '.' . $ext;
             $upload_dir = '../uploads/';
             if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
             if (move_uploaded_file($_FILES['hinh']['tmp_name'], $upload_dir . $ten_file)) {
-                // Xoá ảnh cũ
                 if (!empty($old['hinh_cu']) && file_exists($upload_dir . $old['hinh_cu'])) {
                     unlink($upload_dir . $old['hinh_cu']);
                 }
                 $hinh = $ten_file;
             }
         }
+    } elseif ($xoa_hinh) {
+        $upload_dir = '../uploads/';
+        if (!empty($old['hinh_cu']) && file_exists($upload_dir . $old['hinh_cu'])) {
+            unlink($upload_dir . $old['hinh_cu']);
+        }
+        $hinh = '';
     }
 
     if (empty($errors)) {
-        if ($action === 'create') {
-            $stmt = $pdo->prepare("
-                INSERT INTO sach (ma_sach, ten, tac_gia, the_loai_id, nha_xb, mo_ta, don_vi_tinh, hinh, ty_le_ln)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt->execute([$ma_sach, $ten, $tac_gia, $the_loai_id, $nha_xb, $mo_ta, $don_vi, $hinh, $ty_le_ln]);
-            $_SESSION['flash'] = ['type' => 'success', 'msg' => 'Thêm sách thành công!'];
-        } else {
-            $stmt = $pdo->prepare("
-                UPDATE sach SET ma_sach=?, ten=?, tac_gia=?, the_loai_id=?, nha_xb=?,
-                                mo_ta=?, don_vi_tinh=?, hinh=?, ty_le_ln=?
-                WHERE id = ?
-            ");
-            $stmt->execute([$ma_sach, $ten, $tac_gia, $the_loai_id, $nha_xb, $mo_ta, $don_vi, $hinh, $ty_le_ln, $edit_id]);
-            $_SESSION['flash'] = ['type' => 'success', 'msg' => 'Cập nhật sách thành công!'];
-        }
+        $stmt = $pdo->prepare("
+            UPDATE sach SET ten=?, tac_gia=?, the_loai_id=?, nha_xb=?,
+                            mo_ta=?, don_vi_tinh=?, hinh=?, ty_le_ln=?
+            WHERE id = ?
+        ");
+        $stmt->execute([$ten, $tac_gia, $the_loai_id, $nha_xb, $mo_ta, $don_vi, $hinh, $ty_le_ln, $edit_id]);
+        $_SESSION['flash'] = ['type' => 'success', 'msg' => 'Cap nhat sach thanh cong!'];
         header('Location: /nhasach/admin/products.php');
         exit;
     }
-    // Có lỗi → giữ lại form
-    if ($action === 'update') {
-        $stmt = $pdo->prepare("SELECT * FROM sach WHERE id = ?");
-        $stmt->execute([$edit_id]);
-        $edit_sach = $stmt->fetch();
-    }
+
+    $stmt = $pdo->prepare("SELECT * FROM sach WHERE id = ?");
+    $stmt->execute([$edit_id]);
+    $edit_sach = $stmt->fetch();
 }
 
 // ============================================================
-// DANH SÁCH SÁCH
+// DANH SACH SACH + PHAN TRANG
 // ============================================================
 $filter_tl     = (int)($_GET['the_loai'] ?? 0);
 $filter_search = trim($_GET['search'] ?? '');
 $filter_tt     = $_GET['trang_thai'] ?? 'tat_ca';
+$per_page      = 10;
+$trang_hien    = max(1, (int)($_GET['trang'] ?? 1));
 
 $where  = ["1=1"];
 $params = [];
-if ($filter_tl > 0)          { $where[] = "s.the_loai_id = ?"; $params[] = $filter_tl; }
-if ($filter_search !== '')   { $where[] = "(s.ten LIKE ? OR s.ma_sach LIKE ?)"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; }
-if ($filter_tt === 'hien')   { $where[] = "s.hien_trang = 1"; }
-if ($filter_tt === 'an')     { $where[] = "s.hien_trang = 0"; }
+if ($filter_tl > 0)        { $where[] = "s.the_loai_id = ?"; $params[] = $filter_tl; }
+if ($filter_search !== '') { $where[] = "(s.ten LIKE ? OR s.ma_sach LIKE ?)"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; }
+if ($filter_tt === 'hien')  { $where[] = "s.hien_trang = 1"; }
+if ($filter_tt === 'an')    { $where[] = "s.hien_trang = 0"; }
 
 $where_sql = implode(' AND ', $where);
-$sachs = $pdo->prepare("
+
+$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM sach s WHERE $where_sql");
+$count_stmt->execute($params);
+$total      = (int)$count_stmt->fetchColumn();
+$total_page = max(1, (int)ceil($total / $per_page));
+$trang_hien = min($trang_hien, $total_page);
+$offset     = ($trang_hien - 1) * $per_page;
+
+$sachs_stmt = $pdo->prepare("
     SELECT s.*, tl.ten AS ten_the_loai,
            ROUND(s.gia_nhap * (1 + s.ty_le_ln/100), 0) AS gia_ban
     FROM sach s JOIN the_loai tl ON tl.id = s.the_loai_id
     WHERE $where_sql
     ORDER BY s.ngay_tao DESC
+    LIMIT $per_page OFFSET $offset
 ");
-$sachs->execute($params);
-$sachs = $sachs->fetchAll();
+$sachs_stmt->execute($params);
+$sachs = $sachs_stmt->fetchAll();
+
+function page_url(int $p): string {
+    $q = $_GET;
+    $q['trang'] = $p;
+    unset($q['edit'], $q['action']);
+    return '/nhasach/admin/products.php?' . http_build_query($q);
+}
 ?>
 
 <div class="page-header">
   <h5><i class="bi bi-book me-2" style="color:#f4a261;"></i>Quản lý sách</h5>
-  <button class="btn btn-sm" onclick="toggleForm()"
-          style="background:#f4a261;color:#fff;border:none;border-radius:8px;">
+  <a href="/nhasach/admin/product_add.php" class="btn btn-sm"
+     style="background:#f4a261;color:#fff;border:none;border-radius:8px;">
     <i class="bi bi-plus-lg me-1"></i>Thêm sách mới
-  </button>
+  </a>
 </div>
 
-<!-- FORM THÊM / SỬA -->
-<div class="admin-card mb-4" id="form-wrap"
-     style="<?= ($edit_sach || !empty($errors)) ? '' : 'display:none;' ?>">
-  <div class="card-title"><?= $edit_sach ? 'Sửa thông tin sách' : 'Thêm sách mới' ?></div>
+<?php if ($edit_sach): ?>
+<div class="admin-card mb-4">
+  <div class="card-title">Sửa thông tin sách — <span style="color:#f4a261;"><?= htmlspecialchars($edit_sach['ma_sach']) ?></span></div>
 
   <form method="POST" action="/nhasach/admin/products.php"
         enctype="multipart/form-data" novalidate>
-    <input type="hidden" name="action" value="<?= $edit_sach ? 'update' : 'create' ?>">
-    <?php if ($edit_sach): ?>
-      <input type="hidden" name="edit_id" value="<?= $edit_sach['id'] ?>">
-      <input type="hidden" name="hinh_cu" value="<?= htmlspecialchars($edit_sach['hinh']) ?>">
-    <?php endif; ?>
+    <input type="hidden" name="action"  value="update">
+    <input type="hidden" name="edit_id" value="<?= $edit_sach['id'] ?>">
+    <input type="hidden" name="hinh_cu" value="<?= htmlspecialchars($edit_sach['hinh']) ?>">
 
     <div class="row g-3">
-      <!-- Mã sách -->
-      <div class="col-md-3">
-        <label class="form-label fw-semibold" style="font-size:.85rem;">Mã sách *</label>
-        <input type="text" name="ma_sach"
-               class="form-control <?= isset($errors['ma_sach']) ? 'is-invalid' : '' ?>"
-               value="<?= htmlspecialchars($edit_sach['ma_sach'] ?? $old['ma_sach'] ?? '') ?>"
-               placeholder="VD: S001"
-               <?= $edit_sach ? 'readonly style="background:#f8f9fa; color:#888;"' : '' ?>>
-        <?php if ($edit_sach): ?>
-          <small class="text-muted">Mã sách không thể thay đổi.</small>
-        <?php endif; ?>
-        <?php if (isset($errors['ma_sach'])): ?><div class="invalid-feedback"><?= $errors['ma_sach'] ?></div><?php endif; ?>
+      <div class="col-md-2">
+        <label class="form-label fw-semibold" style="font-size:.85rem;">Mã sách</label>
+        <input type="text" class="form-control"
+               value="<?= htmlspecialchars($edit_sach['ma_sach']) ?>"
+               readonly style="background:#f8f9fa;color:#888;">
+        <small class="text-muted">Không thể thay đổi.</small>
       </div>
 
-      <!-- Tên sách -->
-      <div class="col-md-6">
+      <div class="col-md-5">
         <label class="form-label fw-semibold" style="font-size:.85rem;">Tên sách *</label>
         <input type="text" name="ten"
                class="form-control <?= isset($errors['ten']) ? 'is-invalid' : '' ?>"
-               value="<?= htmlspecialchars($edit_sach['ten'] ?? $old['ten'] ?? '') ?>"
-               placeholder="Tên đầy đủ của sách">
+               value="<?= htmlspecialchars($edit_sach['ten'] ?? $old['ten'] ?? '') ?>">
         <?php if (isset($errors['ten'])): ?><div class="invalid-feedback"><?= $errors['ten'] ?></div><?php endif; ?>
       </div>
 
-      <!-- Tác giả -->
       <div class="col-md-3">
         <label class="form-label fw-semibold" style="font-size:.85rem;">Tác giả</label>
         <input type="text" name="tac_gia" class="form-control"
-               value="<?= htmlspecialchars($edit_sach['tac_gia'] ?? $old['tac_gia'] ?? '') ?>"
-               placeholder="Tên tác giả">
+               value="<?= htmlspecialchars($edit_sach['tac_gia'] ?? $old['tac_gia'] ?? '') ?>">
       </div>
 
-      <!-- Thể loại -->
-      <div class="col-md-3">
+      <div class="col-md-2">
         <label class="form-label fw-semibold" style="font-size:.85rem;">Thể loại *</label>
         <select name="the_loai_id" class="form-select <?= isset($errors['the_loai_id']) ? 'is-invalid' : '' ?>">
-          <option value="">-- Chọn thể loại --</option>
+          <option value="">-- Chọn --</option>
           <?php foreach ($the_loais as $tl): ?>
             <option value="<?= $tl['id'] ?>"
               <?= ($edit_sach['the_loai_id'] ?? $old['the_loai_id'] ?? 0) == $tl['id'] ? 'selected' : '' ?>>
@@ -226,22 +214,18 @@ $sachs = $sachs->fetchAll();
         <?php if (isset($errors['the_loai_id'])): ?><div class="invalid-feedback"><?= $errors['the_loai_id'] ?></div><?php endif; ?>
       </div>
 
-      <!-- NXB -->
       <div class="col-md-3">
         <label class="form-label fw-semibold" style="font-size:.85rem;">Nhà xuất bản</label>
         <input type="text" name="nha_xb" class="form-control"
-               value="<?= htmlspecialchars($edit_sach['nha_xb'] ?? $old['nha_xb'] ?? '') ?>"
-               placeholder="NXB Kim Đồng">
+               value="<?= htmlspecialchars($edit_sach['nha_xb'] ?? $old['nha_xb'] ?? '') ?>">
       </div>
 
-      <!-- Đơn vị -->
       <div class="col-md-2">
         <label class="form-label fw-semibold" style="font-size:.85rem;">Đơn vị tính</label>
         <input type="text" name="don_vi_tinh" class="form-control"
                value="<?= htmlspecialchars($edit_sach['don_vi_tinh'] ?? $old['don_vi_tinh'] ?? 'cuốn') ?>">
       </div>
 
-      <!-- Tỷ lệ lợi nhuận -->
       <div class="col-md-2">
         <label class="form-label fw-semibold" style="font-size:.85rem;">Tỷ lệ LN (%)</label>
         <input type="number" name="ty_le_ln" min="0" max="500" step="0.1"
@@ -250,66 +234,66 @@ $sachs = $sachs->fetchAll();
         <?php if (isset($errors['ty_le_ln'])): ?><div class="invalid-feedback"><?= $errors['ty_le_ln'] ?></div><?php endif; ?>
       </div>
 
-      <!-- Ảnh bìa -->
-      <div class="col-md-2">
+      <div class="col-md-3">
         <label class="form-label fw-semibold" style="font-size:.85rem;">Ảnh bìa</label>
         <input type="file" name="hinh" class="form-control <?= isset($errors['hinh']) ? 'is-invalid' : '' ?>"
                accept="image/*" onchange="previewImg(this)">
         <?php if (isset($errors['hinh'])): ?><div class="invalid-feedback"><?= $errors['hinh'] ?></div><?php endif; ?>
-        <?php if (!empty($edit_sach['hinh'])): ?>
-          <img src="/nhasach/uploads/<?= htmlspecialchars($edit_sach['hinh']) ?>"
-               id="img-preview"
-               style="width:60px;height:75px;object-fit:cover;border-radius:6px;margin-top:6px;">
-        <?php else: ?>
-          <img id="img-preview" style="display:none;width:60px;height:75px;object-fit:cover;border-radius:6px;margin-top:6px;">
-        <?php endif; ?>
+        <div class="mt-2 d-flex align-items-center gap-2">
+          <?php if (!empty($edit_sach['hinh'])): ?>
+            <img src="/nhasach/uploads/<?= htmlspecialchars($edit_sach['hinh']) ?>"
+                 id="img-preview"
+                 style="width:50px;height:64px;object-fit:cover;border-radius:6px;">
+            <label class="d-flex align-items-center gap-1" style="font-size:.82rem;color:#888;cursor:pointer;">
+              <input type="checkbox" name="xoa_hinh" value="1"> Xoá ảnh
+            </label>
+          <?php else: ?>
+            <img id="img-preview" style="display:none;width:50px;height:64px;object-fit:cover;border-radius:6px;">
+          <?php endif; ?>
+        </div>
       </div>
 
-      <!-- Mô tả -->
       <div class="col-12">
         <label class="form-label fw-semibold" style="font-size:.85rem;">Mô tả</label>
-        <textarea name="mo_ta" class="form-control" rows="3"
-                  placeholder="Giới thiệu ngắn về nội dung sách..."><?= htmlspecialchars($edit_sach['mo_ta'] ?? $old['mo_ta'] ?? '') ?></textarea>
+        <textarea name="mo_ta" class="form-control" rows="3"><?= htmlspecialchars($edit_sach['mo_ta'] ?? $old['mo_ta'] ?? '') ?></textarea>
       </div>
 
       <div class="col-12 d-flex gap-2 align-items-center flex-wrap">
         <button type="submit" class="btn btn-sm px-4"
                 style="background:#f4a261;color:#fff;border:none;border-radius:8px;">
-          <i class="bi bi-check-lg me-1"></i><?= $edit_sach ? 'Cập nhật' : 'Thêm sách' ?>
+          <i class="bi bi-check-lg me-1"></i>Cập nhật
         </button>
         <a href="/nhasach/admin/products.php" class="btn btn-sm btn-outline-secondary"
            style="border-radius:8px;">Huỷ</a>
 
-        <?php if ($edit_sach): ?>
-          <span class="ms-auto">
-            <?php if ($edit_sach['hien_trang']): ?>
-              <a href="/nhasach/admin/products.php?action=delete&id=<?= $edit_sach['id'] ?>"
-                 class="btn btn-sm btn-outline-warning" style="border-radius:8px;"
-                 onclick="return confirm('Ẩn sách này khỏi cửa hàng?')">
-                <i class="bi bi-eye-slash me-1"></i>Ẩn sách
-              </a>
-            <?php else: ?>
-              <a href="/nhasach/admin/products.php?action=show&id=<?= $edit_sach['id'] ?>"
-                 class="btn btn-sm btn-outline-success" style="border-radius:8px;"
-                 onclick="return confirm('Hiện sách này trở lại?')">
-                <i class="bi bi-eye me-1"></i>Hiện sách
-              </a>
-            <?php endif; ?>
-            <?php if (!$edit_sach['da_nhap_hang']): ?>
-              <a href="/nhasach/admin/products.php?action=delete&id=<?= $edit_sach['id'] ?>"
-                 class="btn btn-sm btn-outline-danger ms-1" style="border-radius:8px;"
-                 onclick="return confirm('Xoá hẳn sách này? Không thể khôi phục!')">
-                <i class="bi bi-trash3 me-1"></i>Xoá hẳn
-              </a>
-            <?php endif; ?>
-          </span>
-        <?php endif; ?>
+        <span class="ms-auto d-flex gap-1 flex-wrap">
+          <?php if ($edit_sach['hien_trang']): ?>
+            <a href="/nhasach/admin/products.php?action=delete&id=<?= $edit_sach['id'] ?>"
+               class="btn btn-sm btn-outline-warning" style="border-radius:8px;"
+               onclick="return confirm('An sach nay khoi cua hang?')">
+              <i class="bi bi-eye-slash me-1"></i>Ẩn sách
+            </a>
+          <?php else: ?>
+            <a href="/nhasach/admin/products.php?action=show&id=<?= $edit_sach['id'] ?>"
+               class="btn btn-sm btn-outline-success" style="border-radius:8px;">
+              <i class="bi bi-eye me-1"></i>Hiện sách
+            </a>
+          <?php endif; ?>
+          <?php if (!$edit_sach['da_nhap_hang']): ?>
+            <a href="/nhasach/admin/products.php?action=delete&id=<?= $edit_sach['id'] ?>"
+               class="btn btn-sm btn-outline-danger" style="border-radius:8px;"
+               onclick="return confirm('Xoa han sach nay? Khong the khoi phuc!')">
+              <i class="bi bi-trash3 me-1"></i>Xoá hẳn
+            </a>
+          <?php endif; ?>
+        </span>
       </div>
     </div>
   </form>
 </div>
+<?php endif; ?>
 
-<!-- BỘ LỌC -->
+<!-- BO LOC -->
 <div class="admin-card mb-3">
   <form method="GET" action="/nhasach/admin/products.php" class="row g-2 align-items-end">
     <div class="col-md-4">
@@ -345,10 +329,15 @@ $sachs = $sachs->fetchAll();
   </form>
 </div>
 
-<!-- BẢNG SÁCH -->
+<!-- BANG SACH -->
 <div class="admin-card">
-  <div class="d-flex justify-content-between mb-3">
-    <div class="card-title mb-0">Danh sách sách (<?= count($sachs) ?>)</div>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="card-title mb-0">
+      Danh sách sách
+      <span class="text-muted" style="font-size:.82rem;font-weight:400;">
+        (<?= $total ?> cuốn — trang <?= $trang_hien ?>/<?= $total_page ?>)
+      </span>
+    </div>
   </div>
 
   <?php if (empty($sachs)): ?>
@@ -365,7 +354,7 @@ $sachs = $sachs->fetchAll();
           <th>Giá nhập</th>
           <th>Giá bán</th>
           <th>Trạng thái</th>
-          <th style="width:120px;"></th>
+          <th style="width:80px;"></th>
         </tr>
       </thead>
       <tbody>
@@ -407,7 +396,7 @@ $sachs = $sachs->fetchAll();
             <td style="font-size:.85rem;">
               <?= $s['gia_nhap'] > 0 ? number_format($s['gia_nhap'], 0, ',', '.').'₫' : '—' ?>
             </td>
-            <td style="font-size:.85rem; color:#e63946; font-weight:600;">
+            <td style="font-size:.85rem;color:#e63946;font-weight:600;">
               <?= $s['gia_ban'] > 0 ? number_format($s['gia_ban'], 0, ',', '.').'₫' : '—' ?>
               <br><small class="text-muted">LN: <?= $s['ty_le_ln'] ?>%</small>
             </td>
@@ -419,19 +408,18 @@ $sachs = $sachs->fetchAll();
               <?php endif; ?>
             </td>
             <td>
-              <div class="d-flex gap-1 flex-wrap"
-                   onclick="event.stopPropagation()">
+              <div class="d-flex gap-1" onclick="event.stopPropagation()">
                 <?php if ($s['hien_trang']): ?>
                   <a href="/nhasach/admin/products.php?action=delete&id=<?= $s['id'] ?>"
                      class="btn btn-sm btn-outline-warning" style="border-radius:6px;"
-                     title="Ẩn sách"
-                     onclick="return confirm('Ẩn sách này khỏi cửa hàng?')">
+                     title="An sach"
+                     onclick="return confirm('An sach nay khoi cua hang?')">
                     <i class="bi bi-eye-slash"></i>
                   </a>
                 <?php else: ?>
                   <a href="/nhasach/admin/products.php?action=show&id=<?= $s['id'] ?>"
                      class="btn btn-sm btn-outline-success" style="border-radius:6px;"
-                     title="Hiện lại">
+                     title="Hien lai">
                     <i class="bi bi-eye"></i>
                   </a>
                 <?php endif; ?>
@@ -442,14 +430,52 @@ $sachs = $sachs->fetchAll();
       </tbody>
     </table>
   </div>
+
+  <?php if ($total_page > 1): ?>
+  <nav class="d-flex justify-content-center mt-3">
+    <ul class="pagination pagination-sm mb-0">
+      <li class="page-item <?= $trang_hien <= 1 ? 'disabled' : '' ?>">
+        <a class="page-link" href="<?= page_url($trang_hien - 1) ?>">
+          <i class="bi bi-chevron-left"></i>
+        </a>
+      </li>
+
+      <?php
+      $start = max(1, $trang_hien - 2);
+      $end   = min($total_page, $trang_hien + 2);
+      if ($start > 1): ?>
+        <li class="page-item"><a class="page-link" href="<?= page_url(1) ?>">1</a></li>
+        <?php if ($start > 2): ?>
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+        <?php endif; ?>
+      <?php endif; ?>
+
+      <?php for ($p = $start; $p <= $end; $p++): ?>
+        <li class="page-item <?= $p === $trang_hien ? 'active' : '' ?>">
+          <a class="page-link" href="<?= page_url($p) ?>"><?= $p ?></a>
+        </li>
+      <?php endfor; ?>
+
+      <?php if ($end < $total_page): ?>
+        <?php if ($end < $total_page - 1): ?>
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+        <?php endif; ?>
+        <li class="page-item"><a class="page-link" href="<?= page_url($total_page) ?>"><?= $total_page ?></a></li>
+      <?php endif; ?>
+
+      <li class="page-item <?= $trang_hien >= $total_page ? 'disabled' : '' ?>">
+        <a class="page-link" href="<?= page_url($trang_hien + 1) ?>">
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      </li>
+    </ul>
+  </nav>
+  <?php endif; ?>
+
   <?php endif; ?>
 </div>
 
 <script>
-function toggleForm() {
-  const wrap = document.getElementById('form-wrap');
-  wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
-}
 function previewImg(input) {
   const preview = document.getElementById('img-preview');
   if (input.files && input.files[0]) {
