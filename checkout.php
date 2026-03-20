@@ -254,7 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
 
           <div class="row g-2 mb-3">
-            <div class="col-6">
+            <div class="col-12">
               <label class="form-label fw-semibold" style="font-size:.85rem;">
                 Phường/Xã <span class="text-danger">*</span>
               </label>

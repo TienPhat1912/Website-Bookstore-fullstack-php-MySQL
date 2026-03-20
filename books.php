@@ -315,6 +315,15 @@ inpGiaDen.addEventListener('blur', function() {
   this.value = fmt(v);
   updateTrack();
 });
+inpGiaTu.addEventListener('input', function() {
+  const pos = this.selectionStart;
+  const raw = parseFmt(this.value);
+  if (!isNaN(raw) && raw > 0) this.value = fmt(raw);
+});
+inpGiaDen.addEventListener('input', function() {
+  const raw = parseFmt(this.value);
+  if (!isNaN(raw) && raw > 0) this.value = fmt(raw);
+});
 document.getElementById('form-search').addEventListener('submit', function() {
   inpGiaTu.value  = parseFmt(inpGiaTu.value) || 0;
   inpGiaDen.value = parseFmt(inpGiaDen.value) || 0;
