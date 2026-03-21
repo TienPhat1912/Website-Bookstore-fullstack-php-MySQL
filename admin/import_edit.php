@@ -16,7 +16,15 @@ $action   = $_REQUEST['action'] ?? '';
 
 // ---- HOÀN THÀNH ----
 if ($action === 'complete' && $is_draft) {
-    $rows = $pdo->prepare("SELECT cn.*, s.so_luong, s.gia_nhap FROM chi_tiet_nhap cn JOIN sach s ON s.id = cn.sach_id WHERE cn.phieu_nhap_id = ?");
+    // Reload phieu để check ngày
+    $p_check = $pdo->prepare("SELECT ngay_nhap FROM phieu_nhap WHERE id = ?");
+    $p_check->execute([$id]);
+    $ngay_check = $p_check->fetchColumn();
+    if (empty($ngay_check) || $ngay_check === '0000-00-00') {
+        $_SESSION['flash'] = ['type' => 'danger', 'msg' => 'Vui lòng nhập ngày nhập hàng trước khi hoàn thành phiếu.'];
+        header("Location: /nhasach/admin/import_edit.php?id=$id"); exit;
+    }
+    $rows = $pdo->prepare("SELECT cn.*, s.so_luong AS ton_kho, s.gia_nhap AS gia_nhap_cu FROM chi_tiet_nhap cn JOIN sach s ON s.id = cn.sach_id WHERE cn.phieu_nhap_id = ?");
     $rows->execute([$id]);
     $rows = $rows->fetchAll();
     if (empty($rows)) {
@@ -25,16 +33,13 @@ if ($action === 'complete' && $is_draft) {
         $pdo->beginTransaction();
         try {
             foreach ($rows as $row) {
-                $ton    = (int)$row['so_luong'];
-                $gia_cu = (float)$row['gia_nhap'];
-                $sl     = (int)$row['so_luong'];   // ton_hien_tai
-                // Lấy lại đúng từ sach
+                // Lấy lại đúng từ sach để tránh race condition
                 $s = $pdo->prepare("SELECT so_luong, gia_nhap FROM sach WHERE id = ?");
                 $s->execute([$row['sach_id']]);
                 $sach = $s->fetch();
-                $ton    = (int)$sach['so_luong'];
-                $gia_cu = (float)$sach['gia_nhap'];
-                $sl     = (int)$row['so_luong'];
+                $ton     = (int)$sach['so_luong'];
+                $gia_cu  = (float)$sach['gia_nhap'];
+                $sl      = (int)$row['so_luong'];  // số lượng nhập từ chi_tiet_nhap
                 $gia_moi = (float)$row['don_gia'];
                 $bq = ($ton + $sl > 0) ? ($ton * $gia_cu + $sl * $gia_moi) / ($ton + $sl) : $gia_moi;
                 $pdo->prepare("UPDATE sach SET so_luong = so_luong + ?, gia_nhap = ROUND(?,0), da_nhap_hang = 1 WHERE id = ?")
@@ -68,13 +73,25 @@ if ($action === 'delete_phieu' && $is_draft) {
 
 // ---- AUTO-SAVE THÔNG TIN PHIẾU (AJAX) ----
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'save_info' && $is_draft) {
+    $ngay = trim($_POST['ngay_nhap'] ?? '');
+    if (empty($ngay)) {
+        echo json_encode(['ok' => false, 'msg' => 'Ngày nhập không được để trống.']); exit;
+    }
     $pdo->prepare("UPDATE phieu_nhap SET ngay_nhap = ?, ghi_chu = ? WHERE id = ?")
-        ->execute([trim($_POST['ngay_nhap'] ?? ''), trim($_POST['ghi_chu'] ?? ''), $id]);
+        ->execute([$ngay, trim($_POST['ghi_chu'] ?? ''), $id]);
     echo json_encode(['ok' => true]); exit;
 }
 
 // ---- THÊM SÁCH ----
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'add_item' && $is_draft) {
+    // Reload phieu từ DB để lấy ngày mới nhất
+    $phieu_check = $pdo->prepare("SELECT ngay_nhap FROM phieu_nhap WHERE id = ?");
+    $phieu_check->execute([$id]);
+    $ngay_check = $phieu_check->fetchColumn();
+    if (empty($ngay_check) || $ngay_check === '0000-00-00') {
+        $_SESSION['flash'] = ['type' => 'danger', 'msg' => 'Vui lòng nhập ngày nhập hàng trước khi thêm sách.'];
+        header("Location: /nhasach/admin/import_edit.php?id=$id"); exit;
+    }
     $sach_id  = (int)$_POST['sach_id'];
     $so_luong = (int)$_POST['so_luong'];
     $don_gia  = (float)$_POST['don_gia'];
@@ -337,14 +354,32 @@ function autoSave() {
     data.append('ngay_nhap', document.getElementById('inp-ngay').value);
     data.append('ghi_chu', document.getElementById('inp-ghichu').value);
     fetch('/nhasach/admin/import_edit.php?id=<?= $id ?>', { method: 'POST', body: data })
-      .then(r => r.json()).then(() => {
+      .then(r => r.json()).then(res => {
         const s = document.getElementById('save-status');
-        s.style.display = 'inline';
-        setTimeout(() => s.style.display = 'none', 2000);
+        if (res.ok) {
+          s.style.display = 'inline';
+          s.innerHTML = '<i class="bi bi-check-circle me-1"></i>Đã lưu';
+          s.style.color = '#28a745';
+          setTimeout(() => s.style.display = 'none', 2000);
+        } else {
+          s.style.display = 'inline';
+          s.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>' + (res.msg || 'Lỗi lưu');
+          s.style.color = '#e63946';
+        }
       });
   }, 600);
 }
 document.getElementById('inp-ngay').addEventListener('change', autoSave);
+
+document.querySelector('form[action*="add_item"], form input[name="action"][value="add_item"]')
+  ?.closest('form')
+  ?.addEventListener('submit', function(e) {
+    if (!document.getElementById('inp-ngay').value) {
+      e.preventDefault();
+      alert('Vui lòng nhập ngày nhập hàng trước khi thêm sách.');
+      document.getElementById('inp-ngay').focus();
+    }
+  });
 document.getElementById('inp-ghichu').addEventListener('input', autoSave);
 
 // Tìm kiếm sách
