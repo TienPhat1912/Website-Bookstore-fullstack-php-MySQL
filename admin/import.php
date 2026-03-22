@@ -13,6 +13,8 @@ if (($_GET['action'] ?? '') === 'create') {
 }
 $filter_tt     = $_GET['trang_thai'] ?? 'tat_ca';
 $filter_search = trim($_GET['search'] ?? '');
+$per_page      = 15;
+$trang_hien    = max(1, (int)($_GET['trang'] ?? 1));
 
 $where  = ["1=1"];
 $params = [];
@@ -21,6 +23,14 @@ if ($filter_tt === 'done')  { $where[] = "trang_thai = 'done'"; }
 if ($filter_search !== '')  { $where[] = "ma_phieu LIKE ?"; $params[] = "%$filter_search%"; }
 
 $where_sql = implode(' AND ', $where);
+
+$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM phieu_nhap pn WHERE $where_sql");
+$count_stmt->execute($params);
+$total      = (int)$count_stmt->fetchColumn();
+$total_page = max(1, ceil($total / $per_page));
+$trang_hien = min($trang_hien, $total_page);
+$offset     = ($trang_hien - 1) * $per_page;
+
 $phieus = $pdo->prepare("
     SELECT pn.*,
            (SELECT COUNT(*) FROM chi_tiet_nhap WHERE phieu_nhap_id = pn.id) AS so_dong,
@@ -28,6 +38,7 @@ $phieus = $pdo->prepare("
     FROM phieu_nhap pn
     WHERE $where_sql
     ORDER BY pn.ngay_tao DESC
+    LIMIT $per_page OFFSET $offset
 ");
 $phieus->execute($params);
 $phieus = $phieus->fetchAll();
@@ -69,7 +80,7 @@ $phieus = $phieus->fetchAll();
 
 <!-- BẢNG PHIẾU -->
 <div class="admin-card">
-  <div class="card-title">Danh sách phiếu nhập (<?= count($phieus) ?>)</div>
+  <div class="card-title">Danh sách phiếu nhập (<?= $total ?> — trang <?= $trang_hien ?>/<?= $total_page ?>)</div>
 
   <?php if (empty($phieus)): ?>
     <p class="text-muted text-center py-4">Chưa có phiếu nhập nào.</p>
@@ -127,6 +138,25 @@ $phieus = $phieus->fetchAll();
         </tbody>
       </table>
     </div>
+
+    <?php if ($total_page > 1): ?>
+    <nav class="d-flex justify-content-center mt-3">
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item <?= $trang_hien <= 1 ? 'disabled' : '' ?>">
+          <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['trang' => $trang_hien - 1])) ?>"><i class="bi bi-chevron-left"></i></a>
+        </li>
+        <?php for ($p = max(1, $trang_hien - 2); $p <= min($total_page, $trang_hien + 2); $p++): ?>
+          <li class="page-item <?= $p === $trang_hien ? 'active' : '' ?>">
+            <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['trang' => $p])) ?>"><?= $p ?></a>
+          </li>
+        <?php endfor; ?>
+        <li class="page-item <?= $trang_hien >= $total_page ? 'disabled' : '' ?>">
+          <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['trang' => $trang_hien + 1])) ?>"><i class="bi bi-chevron-right"></i></a>
+        </li>
+      </ul>
+    </nav>
+    <?php endif; ?>
+
   <?php endif; ?>
 </div>
 

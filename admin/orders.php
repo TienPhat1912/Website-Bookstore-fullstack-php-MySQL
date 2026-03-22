@@ -227,6 +227,8 @@ $filter_tu    = $_GET['tu_ngay']   ?? '';
 $filter_den   = $_GET['den_ngay']  ?? '';
 $filter_phuong= $_GET['phuong']    ?? '';
 $filter_search= trim($_GET['search'] ?? '');
+$per_page     = 20;
+$trang_hien   = max(1, (int)($_GET['trang'] ?? 1));
 
 $where  = ["1=1"];
 $params = [];
@@ -239,6 +241,14 @@ if ($filter_search !== '')       { $where[] = "(dh.ma_don LIKE ? OR kh.ho_ten LI
 $sort = in_array($_GET['sort'] ?? '', ['phuong']) ? 'dh.phuong_xa ASC' : 'dh.ngay_dat DESC';
 
 $where_sql = implode(' AND ', $where);
+
+$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM don_hang dh JOIN khach_hang kh ON kh.id = dh.khach_hang_id WHERE $where_sql");
+$count_stmt->execute($params);
+$total      = (int)$count_stmt->fetchColumn();
+$total_page = max(1, ceil($total / $per_page));
+$trang_hien = min($trang_hien, $total_page);
+$offset     = ($trang_hien - 1) * $per_page;
+
 $don_hangs = $pdo->prepare("
     SELECT dh.id, dh.ma_don, dh.ngay_dat, dh.tong_tien, dh.trang_thai,
            CONCAT(dh.dia_chi, ', ', COALESCE(dh.phuong_xa,''), ', ', COALESCE(dh.tinh_tp,'')) AS dia_chi_giao, dh.phuong_thuc_tt,
@@ -247,6 +257,7 @@ $don_hangs = $pdo->prepare("
     JOIN khach_hang kh ON kh.id = dh.khach_hang_id
     WHERE $where_sql
     ORDER BY $sort
+    LIMIT $per_page OFFSET $offset
 ");
 $don_hangs->execute($params);
 $don_hangs = $don_hangs->fetchAll();
@@ -336,7 +347,7 @@ foreach ($stats as $st) $stats_map[$st['trang_thai']] = $st;
 
 <!-- BẢNG ĐƠN HÀNG -->
 <div class="admin-card">
-  <div class="card-title">Danh sách đơn hàng (<?= count($don_hangs) ?>)</div>
+  <div class="card-title">Danh sách đơn hàng (<?= $total ?> — trang <?= $trang_hien ?>/<?= $total_page ?>)</div>
 
   <?php if (empty($don_hangs)): ?>
     <p class="text-muted text-center py-4">Không có đơn hàng nào.</p>
@@ -408,6 +419,25 @@ foreach ($stats as $st) $stats_map[$st['trang_thai']] = $st;
         </tbody>
       </table>
     </div>
+
+    <?php if ($total_page > 1): ?>
+    <nav class="d-flex justify-content-center mt-3">
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item <?= $trang_hien <= 1 ? 'disabled' : '' ?>">
+          <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['trang' => $trang_hien - 1])) ?>"><i class="bi bi-chevron-left"></i></a>
+        </li>
+        <?php for ($p = max(1, $trang_hien - 2); $p <= min($total_page, $trang_hien + 2); $p++): ?>
+          <li class="page-item <?= $p === $trang_hien ? 'active' : '' ?>">
+            <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['trang' => $p])) ?>"><?= $p ?></a>
+          </li>
+        <?php endfor; ?>
+        <li class="page-item <?= $trang_hien >= $total_page ? 'disabled' : '' ?>">
+          <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['trang' => $trang_hien + 1])) ?>"><i class="bi bi-chevron-right"></i></a>
+        </li>
+      </ul>
+    </nav>
+    <?php endif; ?>
+
   <?php endif; ?>
 </div>
 

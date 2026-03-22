@@ -15,6 +15,7 @@ $filter_search  = trim($_GET['search']    ?? '');
 $filter_tl      = (int)($_GET['the_loai'] ?? 0);
 $filter_tt      = $_GET['trang_thai']     ?? 'tat_ca';
 $filter_ngay    = trim($_GET['ngay']      ?? ''); // thời điểm tra cứu
+$filter_sort    = $_GET['sort'] ?? 'ton_asc';
 $per_page       = 20;
 $trang_hien     = max(1, (int)($_GET['trang'] ?? 1));
 
@@ -47,8 +48,18 @@ if ($use_date) {
             ), 0)
         )
     ";
+$gia_nhap_subquery = "
+        COALESCE((
+            SELECT ROUND(SUM(cn2.so_luong * cn2.don_gia) / NULLIF(SUM(cn2.so_luong), 0), 0)
+            FROM chi_tiet_nhap cn2
+            JOIN phieu_nhap pn2 ON pn2.id = cn2.phieu_nhap_id
+            WHERE cn2.sach_id = s.id AND pn2.trang_thai = 'done'
+              AND pn2.ngay_nhap <= $ngay_safe
+        ), 0)
+    ";
 } else {
     $ton_subquery = "s.so_luong";
+    $gia_nhap_subquery = "s.gia_nhap";
 }
 
 $where  = ["s.hien_trang = 1"];
@@ -87,15 +98,26 @@ $total_page = max(1, ceil($total / $per_page));
 $trang_hien = min($trang_hien, $total_page);
 $offset     = ($trang_hien - 1) * $per_page;
 
+switch($filter_sort) {
+    case 'ton_desc':      $order = 'ton_kho DESC'; break;
+    case 'gia_nhap_asc':  $order = 's.gia_nhap ASC'; break;
+    case 'gia_nhap_desc': $order = 's.gia_nhap DESC'; break;
+    case 'gia_ban_asc':   $order = 'gia_ban ASC'; break;
+    case 'gia_ban_desc':  $order = 'gia_ban DESC'; break;
+    case 'tt_chua':       $order = 's.da_nhap_hang ASC, ton_kho ASC'; break;
+    case 'tt_het':        $order = 'ton_kho ASC, s.ten ASC'; break;
+    default:              $order = 'ton_kho ASC'; break;
+}
+
 $sql = "
-    SELECT s.id, s.ma_sach, s.ten, s.gia_nhap, s.ty_le_ln, s.da_nhap_hang, s.don_vi_tinh,
+    SELECT s.id, s.ma_sach, s.ten, $gia_nhap_subquery AS gia_nhap, s.ty_le_ln, s.da_nhap_hang, s.don_vi_tinh,
            tl.ten AS ten_the_loai,
-           ROUND(s.gia_nhap * (1 + s.ty_le_ln / 100), 0) AS gia_ban,
+           ROUND($gia_nhap_subquery * (1 + s.ty_le_ln / 100), 0) AS gia_ban,
            $ton_subquery AS ton_kho
     FROM sach s JOIN the_loai tl ON tl.id = s.the_loai_id
     WHERE $where_sql
     $having
-    ORDER BY ton_kho ASC, s.ten ASC
+    ORDER BY $order, s.ten ASC
     LIMIT :limit OFFSET :offset
 ";
 $stmt = $pdo->prepare($sql);
@@ -194,7 +216,20 @@ function inv_url(array $override = []): string {
              value="<?= htmlspecialchars($filter_ngay) ?>"
              max="<?= date('Y-m-d') ?>">
     </div>
-    <div class="col-md-3 d-flex gap-2 align-items-end">
+    <div class="col-md-2">
+      <label class="form-label fw-semibold" style="font-size:.8rem;">Sắp xếp</label>
+      <select name="sort" class="form-select form-select-sm">
+        <option value="ton_asc"      <?= $filter_sort=='ton_asc'      ?'selected':'' ?>>Tồn kho tăng</option>
+        <option value="ton_desc"     <?= $filter_sort=='ton_desc'     ?'selected':'' ?>>Tồn kho giảm</option>
+        <option value="gia_nhap_asc" <?= $filter_sort=='gia_nhap_asc' ?'selected':'' ?>>Giá vốn tăng</option>
+        <option value="gia_nhap_desc"<?= $filter_sort=='gia_nhap_desc'?'selected':'' ?>>Giá vốn giảm</option>
+        <option value="gia_ban_asc"  <?= $filter_sort=='gia_ban_asc'  ?'selected':'' ?>>Giá bán tăng</option>
+        <option value="gia_ban_desc" <?= $filter_sort=='gia_ban_desc' ?'selected':'' ?>>Giá bán giảm</option>
+        <option value="tt_chua"      <?= $filter_sort=='tt_chua'      ?'selected':'' ?>>Chưa nhập hàng</option>
+        <option value="tt_het"       <?= $filter_sort=='tt_het'       ?'selected':'' ?>>Hết hàng trước</option>
+      </select>
+    </div>
+    <div class="col-md-1 d-flex gap-2 align-items-end">
       <button type="submit" class="btn btn-sm btn-primary" style="border-radius:8px;">
         <i class="bi bi-funnel me-1"></i>Lọc
       </button>

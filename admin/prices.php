@@ -40,6 +40,10 @@ $filter_tl     = (int)($_GET['the_loai'] ?? 0);
 $filter_search = trim($_GET['search'] ?? '');
 $filter_nhap   = $_GET['da_nhap'] ?? 'tat_ca';
 
+$filter_nhap   = $_GET['da_nhap'] ?? 'tat_ca';
+$per_page      = 20;
+$trang_hien    = max(1, (int)($_GET['trang'] ?? 1));
+
 $where  = ["1=1"];
 $params = [];
 if ($filter_tl > 0)        { $where[] = "s.the_loai_id = ?"; $params[] = $filter_tl; }
@@ -48,6 +52,14 @@ if ($filter_nhap === 'co')  { $where[] = "s.da_nhap_hang = 1"; }
 if ($filter_nhap === 'chua'){ $where[] = "s.da_nhap_hang = 0"; }
 
 $where_sql = implode(' AND ', $where);
+
+$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM sach s JOIN the_loai tl ON tl.id = s.the_loai_id WHERE $where_sql");
+$count_stmt->execute($params);
+$total      = (int)$count_stmt->fetchColumn();
+$total_page = max(1, ceil($total / $per_page));
+$trang_hien = min($trang_hien, $total_page);
+$offset     = ($trang_hien - 1) * $per_page;
+
 $sachs = $pdo->prepare("
     SELECT s.id, s.ma_sach, s.ten, s.gia_nhap, s.ty_le_ln, s.so_luong, s.da_nhap_hang,
            tl.ten AS ten_the_loai,
@@ -57,6 +69,7 @@ $sachs = $pdo->prepare("
     JOIN the_loai tl ON tl.id = s.the_loai_id
     WHERE $where_sql
     ORDER BY s.ten ASC
+    LIMIT $per_page OFFSET $offset
 ");
 $sachs->execute($params);
 $sachs = $sachs->fetchAll();
@@ -202,7 +215,7 @@ $the_loais = $pdo->query("SELECT * FROM the_loai WHERE trang_thai = 1 ORDER BY t
     <input type="hidden" name="action" value="bulk_update">
 
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <div class="card-title mb-0">Bảng giá sản phẩm (<?= count($sachs) ?>)</div>
+      <div class="card-title mb-0">Bảng giá sản phẩm (<?= $total ?> — trang <?= $trang_hien ?>/<?= $total_page ?>)</div>
       <button type="submit" class="btn btn-sm"
               style="background:#f4a261;color:#fff;border:none;border-radius:8px;"
               onclick="return confirm('Lưu tất cả thay đổi?')">
@@ -268,6 +281,25 @@ $the_loais = $pdo->query("SELECT * FROM the_loai WHERE trang_thai = 1 ORDER BY t
           </tbody>
         </table>
       </div>
+
+      <?php if ($total_page > 1): ?>
+      <nav class="d-flex justify-content-center mt-3">
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item <?= $trang_hien <= 1 ? 'disabled' : '' ?>">
+            <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['trang' => $trang_hien - 1])) ?>"><i class="bi bi-chevron-left"></i></a>
+          </li>
+          <?php for ($p = max(1, $trang_hien - 2); $p <= min($total_page, $trang_hien + 2); $p++): ?>
+            <li class="page-item <?= $p === $trang_hien ? 'active' : '' ?>">
+              <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['trang' => $p])) ?>"><?= $p ?></a>
+            </li>
+          <?php endfor; ?>
+          <li class="page-item <?= $trang_hien >= $total_page ? 'disabled' : '' ?>">
+            <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['trang' => $trang_hien + 1])) ?>"><i class="bi bi-chevron-right"></i></a>
+          </li>
+        </ul>
+      </nav>
+      <?php endif; ?>
+
     <?php endif; ?>
   </form>
 </div>
