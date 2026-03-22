@@ -21,22 +21,29 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
     if ($act === 'huy')      $new_tt = 'da_huy';
 
     if ($new_tt) {
-        // Nếu huỷ đơn đã xác nhận → trả lại tồn kho
+        $don = $pdo->prepare("SELECT trang_thai FROM don_hang WHERE id = ?");
+        $don->execute([$id]);
+        $don = $don->fetch();
+        if (!$don) { header("Location: /nhasach/admin/orders.php"); exit; }
+
+        $tt_cu = $don['trang_thai'];
+
         if ($new_tt === 'da_huy') {
-            $don = $pdo->prepare("SELECT trang_thai FROM don_hang WHERE id = ?");
-            $don->execute([$id]);
-            $don = $don->fetch();
-            if ($don && in_array($don['trang_thai'], ['cho_xu_ly', 'da_xac_nhan'])) {
-                // Không cần trả kho vì ta không trừ kho khi đặt - chỉ trừ khi admin xác nhận giao
-                $pdo->prepare("UPDATE don_hang SET trang_thai = ? WHERE id = ?")
-                    ->execute([$new_tt, $id]);
-                $_SESSION['flash'] = ['type' => 'warning', 'msg' => 'Đơn hàng đã bị huỷ.'];
+            if (in_array($tt_cu, ['cho_xu_ly', 'da_xac_nhan'])) {
+                // Hoàn lại tồn kho (đã trừ lúc đặt hàng)
+                $ct = $pdo->prepare("SELECT sach_id, so_luong FROM chi_tiet_don_hang WHERE don_hang_id = ?");
+                $ct->execute([$id]);
+                foreach ($ct->fetchAll() as $row) {
+                    $pdo->prepare("UPDATE sach SET so_luong = so_luong + ? WHERE id = ?")
+                        ->execute([$row['so_luong'], $row['sach_id']]);
+                }
+                $pdo->prepare("UPDATE don_hang SET trang_thai = ? WHERE id = ?")->execute([$new_tt, $id]);
+                $_SESSION['flash'] = ['type' => 'warning', 'msg' => 'Đơn đã huỷ. Tồn kho đã hoàn lại.'];
             } else {
                 $_SESSION['flash'] = ['type' => 'danger', 'msg' => 'Không thể huỷ đơn đã giao.'];
             }
         } else {
-            $pdo->prepare("UPDATE don_hang SET trang_thai = ? WHERE id = ?")
-                ->execute([$new_tt, $id]);
+            $pdo->prepare("UPDATE don_hang SET trang_thai = ? WHERE id = ?")->execute([$new_tt, $id]);
             $_SESSION['flash'] = ['type' => 'success', 'msg' => 'Đã cập nhật trạng thái đơn hàng.'];
         }
     }
