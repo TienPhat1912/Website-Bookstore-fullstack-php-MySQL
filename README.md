@@ -139,6 +139,63 @@ define('DB_PASS', '');   // XAMPP mặc định không có mật khẩu
 
 ---
 
+---
+
+### Bước 6 — (Tuỳ chọn) Reset dữ liệu & Seed sách mẫu
+
+Nếu muốn xoá toàn bộ dữ liệu cũ và tạo lại sách mẫu có ảnh bìa từ đầu:
+
+#### 6.1 — Reset database
+
+Mở [phpMyAdmin](http://localhost/phpmyadmin), chọn database `nhasach`, vào tab **SQL** và chạy:
+
+```sql
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE chi_tiet_don_hang;
+TRUNCATE TABLE don_hang;
+TRUNCATE TABLE chi_tiet_nhap;
+TRUNCATE TABLE phieu_nhap;
+TRUNCATE TABLE gio_hang;
+TRUNCATE TABLE sach;
+SET FOREIGN_KEY_CHECKS = 1;
+ALTER TABLE sach AUTO_INCREMENT = 1;
+```
+
+> ⚠️ Thao tác này sẽ xoá **toàn bộ sách, phiếu nhập, đơn hàng và giỏ hàng**. Dữ liệu thể loại, tài khoản admin và khách hàng vẫn giữ nguyên.
+
+#### 6.2 — Chạy Seed
+
+Truy cập trình duyệt:
+
+```
+http://localhost/nhasach/load.php
+```
+
+Script sẽ tự động tạo sách mẫu cho từng thể loại kèm ảnh bìa tải từ internet. Quá trình mất khoảng **2–5 phút** tuỳ tốc độ mạng. Trang sẽ hiển thị tiến trình từng sách được thêm.
+
+#### 6.3 — Nhập hàng ban đầu
+
+Sau khi seed xong, sách mới có **tồn kho = 0** và chưa hiển thị trên trang bán. Cần vào Admin tạo phiếu nhập:
+
+1. Truy cập [http://localhost/nhasach/admin](http://localhost/nhasach/admin) → đăng nhập
+2. Vào **Nhập hàng** → **Tạo phiếu nhập mới**
+3. Nhập ngày, thêm sách với số lượng và đơn giá → **Hoàn thành phiếu**
+4. Tồn kho và giá bán sẽ tự động cập nhật
+
+> 💡 **Mẹo:** Có thể tạo 1 phiếu nhập chung cho tất cả sách với số lượng 100 để test nhanh.
+
+#### 6.4 — Dọn dẹp
+
+**Xoá file `load.php` sau khi seed xong** để tránh bị chạy lại vô tình:
+
+```bash
+# Windows
+del C:\xampp\htdocs\nhasach\load.php
+
+# macOS / Linux
+rm /path/to/htdocs/nhasach/load.php
+```
+
 ## 📁 Cấu trúc thư mục
 
 ```

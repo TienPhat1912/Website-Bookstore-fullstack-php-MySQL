@@ -21,7 +21,7 @@ if ($xem_id > 0) {
         exit;
     }
     $stmt = $pdo->prepare("
-        SELECT ct.*, s.ten AS ten_sach, s.hinh, s.ma_sach
+        SELECT ct.*, s.ten AS ten_sach, s.hinh, s.ma_sach, s.don_vi_tinh
         FROM chi_tiet_don_hang ct
         JOIN sach s ON s.id = ct.sach_id
         WHERE ct.don_hang_id = ?
@@ -105,7 +105,7 @@ $pt_label = [
           </div>
           <div class="text-end" style="flex-shrink:0;">
             <div style="font-size:.88rem; color:#666;">
-              <?= number_format($ct['gia_ban_luc_dat'], 0, ',', '.') ?>₫ × <?= $ct['so_luong'] ?>
+              <?= number_format($ct['gia_ban_luc_dat'], 0, ',', '.') ?>₫ × <?= $ct['so_luong'] ?> <?= htmlspecialchars($ct['don_vi_tinh']) ?>
             </div>
             <div class="fw-bold" style="color:#e63946;">
               <?= number_format($ct['gia_ban_luc_dat'] * $ct['so_luong'], 0, ',', '.') ?>₫
@@ -173,7 +173,7 @@ $pt_label = [
             </div>
             <small class="text-muted">
               <?= date('d/m/Y H:i', strtotime($dh['ngay_dat'])) ?>
-              &nbsp;·&nbsp; <?= $dh['so_sach'] ?> sách
+              &nbsp;·&nbsp; <?= $dh['so_sach'] ?> sản phẩm
             </small>
           </div>
 
