@@ -246,7 +246,8 @@ $sach_list = $pdo->query("
               </div>
               <div class="col-6">
                 <label class="form-label fw-semibold" style="font-size:.82rem;">Đơn giá nhập (₫) *</label>
-                <input type="number" name="don_gia" id="inp-dongia" class="form-control form-control-sm" min="0" step="100" placeholder="0">
+                <input type="text" id="inp-dongia-display" class="form-control form-control-sm" placeholder="0" inputmode="numeric" autocomplete="off">
+                <input type="hidden" name="don_gia" id="inp-dongia">
               </div>
             </div>
             <div id="gia-source-note" style="display:none; font-size:.78rem; color:#666; padding:6px 10px;
@@ -390,12 +391,41 @@ document.getElementById('sach-search').addEventListener('input', function() {
   });
 });
 
-// Chọn sách → điền giá + ghi chú nguồn
+// === Format giá tiền ===
+function formatMoney(n) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+function unformatMoney(s) {
+  return parseInt(s.replace(/\./g, ''), 10) || 0;
+}
+
+// Ô hiển thị → ô hidden
+const dspEl = document.getElementById('inp-dongia-display');
+const hidEl = document.getElementById('inp-dongia');
+
+dspEl.addEventListener('input', function() {
+  let raw = this.value.replace(/[^\d]/g, '');       // chỉ giữ số
+  if (raw === '') { this.value = ''; hidEl.value = ''; }
+  else {
+    let num = parseInt(raw, 10);
+    this.value = formatMoney(num);
+    hidEl.value = num;
+  }
+  updatePreview();
+});
+
+// Khi chọn sách → điền giá đã format
 document.getElementById('sach-select').addEventListener('change', function() {
   const opt    = this.options[this.selectedIndex];
   const gia    = parseFloat(opt.dataset.gia) || 0;
   const ghichu = opt.dataset.ghichu || '';
-  document.getElementById('inp-dongia').value = gia || '';
+  if (gia > 0) {
+    dspEl.value = formatMoney(gia);
+    hidEl.value = gia;
+  } else {
+    dspEl.value = '';
+    hidEl.value = '';
+  }
   const note = document.getElementById('gia-source-note');
   note.style.display = 'block';
   note.innerHTML = gia > 0
@@ -406,15 +436,14 @@ document.getElementById('sach-select').addEventListener('change', function() {
 
 function updatePreview() {
   const sl  = parseInt(document.getElementById('inp-soluong').value) || 0;
-  const dg  = parseFloat(document.getElementById('inp-dongia').value) || 0;
+  const dg  = unformatMoney(dspEl.value);
   const box = document.getElementById('gia-preview');
   if (sl > 0 && dg > 0) {
     box.style.display = 'block';
-    box.innerHTML = `${sl} × ${dg.toLocaleString('vi')}₫ = <b style="color:#e63946;">${(sl*dg).toLocaleString('vi')}₫</b>`;
+    box.innerHTML = `${sl} × ${formatMoney(dg)}₫ = <b style="color:#e63946;">${formatMoney(sl*dg)}₫</b>`;
   } else { box.style.display = 'none'; }
 }
 document.getElementById('inp-soluong').addEventListener('input', updatePreview);
-document.getElementById('inp-dongia').addEventListener('input', updatePreview);
 <?php endif; ?>
 </script>
 
