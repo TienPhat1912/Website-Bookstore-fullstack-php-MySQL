@@ -214,7 +214,7 @@ function inv_url(array $override = []): string {
       </label>
       <input type="date" name="ngay" class="form-control form-control-sm"
              value="<?= htmlspecialchars($filter_ngay) ?>"
-             max="<?= date('Y-m-d') ?>">
+             >
     </div>
     <div class="col-md-2">
       <label class="form-label fw-semibold" style="font-size:.8rem;">Sắp xếp</label>

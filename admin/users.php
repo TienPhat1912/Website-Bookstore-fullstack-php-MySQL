@@ -3,9 +3,6 @@ ob_start();
 $page_title = 'Người dùng';
 require_once 'includes/admin_header.php';
 
-$errors = [];
-$old    = [];
-
 // ---- KHOÁ / MỞ KHOÁ ----
 if (isset($_GET['action']) && in_array($_GET['action'], ['lock','unlock']) && isset($_GET['id'])) {
   $bi_khoa = $_GET['action'] === 'lock' ? 1 : 0;
@@ -32,44 +29,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'reset_pass' && isset($_GET['i
     exit;
 }
 
-// ---- THÊM TÀI KHOẢN MỚI ----
-$show_form = isset($_GET['add']) || !empty($errors);
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'create_user') {
-    $old      = $_POST;
-    $ho_ten   = trim($_POST['ho_ten']  ?? '');
-    $email    = trim($_POST['email']   ?? '');
-    $sdt      = trim($_POST['so_dien_thoai']     ?? '');
-    $dia_chi  = trim($_POST['dia_chi'] ?? '');
-    $pass     = $_POST['mat_khau']     ?? '';
-
-    if (empty($ho_ten)) $errors['ho_ten']   = 'Vui lòng nhập họ tên.';
-    if (empty($email))  $errors['email']    = 'Vui lòng nhập email.';
-    elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors['email'] = 'Email không hợp lệ.';
-    if (empty($pass) || strlen($pass) < 6)  $errors['mat_khau'] = 'Mật khẩu tối thiểu 6 ký tự.';
-
-    if (empty($errors['email'])) {
-        $ck = $pdo->prepare("SELECT id FROM khach_hang WHERE email = ?");
-        $ck->execute([$email]);
-        if ($ck->fetch()) $errors['email'] = 'Email đã được sử dụng.';
-    }
-
-    if (empty($errors)) {
-        $hash = password_hash($pass, PASSWORD_DEFAULT);
-        $pdo->prepare("
-            INSERT INTO khach_hang (ho_ten, email, so_dien_thoai, dia_chi, mat_khau)
-            VALUES (?, ?, ?, ?, ?)
-        ")->execute([$ho_ten, $email, $sdt, $dia_chi, $hash]);
-        $_SESSION['flash'] = ['type' => 'success', 'msg' => 'Thêm tài khoản thành công!'];
-        header('Location: /nhasach/admin/users.php');
-        exit;
-    }
-    $show_form = true;
-}
-
 // ---- TÌM KIẾM ----
 $filter_search = trim($_GET['search'] ?? '');
 $filter_tt     = $_GET['trang_thai'] ?? 'tat_ca';
+$per_page      = 20;
+$trang_hien    = max(1, (int)($_GET['trang'] ?? 1));
 
 $where  = ["1=1"];
 $params = [];
@@ -78,6 +42,14 @@ if ($filter_tt === 'hoat_dong')  { $where[] = "bi_khoa = 0"; }
 if ($filter_tt === 'bi_khoa')    { $where[] = "bi_khoa = 1"; }
 
 $where_sql = implode(' AND ', $where);
+
+$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM khach_hang kh WHERE $where_sql");
+$count_stmt->execute($params);
+$total      = (int)$count_stmt->fetchColumn();
+$total_page = max(1, ceil($total / $per_page));
+$trang_hien = min($trang_hien, $total_page);
+$offset     = ($trang_hien - 1) * $per_page;
+
 $users = $pdo->prepare("
     SELECT kh.*,
            (SELECT COUNT(*) FROM don_hang WHERE khach_hang_id = kh.id) AS so_don,
@@ -85,6 +57,7 @@ $users = $pdo->prepare("
     FROM khach_hang kh
     WHERE $where_sql
     ORDER BY kh.ngay_tao DESC
+    LIMIT $per_page OFFSET $offset
 ");
 $users->execute($params);
 $users = $users->fetchAll();
@@ -95,7 +68,7 @@ $tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE bi_khoa = 1")
 
 <div class="page-header">
   <h5><i class="bi bi-people me-2" style="color:#f4a261;"></i>Quản lý người dùng</h5>
-  <a href="/nhasach/admin/users.php?add=1"
+  <a href="/nhasach/admin/user_add.php"
      class="btn btn-sm" style="background:#f4a261;color:#fff;border:none;border-radius:8px;">
     <i class="bi bi-plus-lg me-1"></i>Thêm tài khoản
   </a>
@@ -131,61 +104,6 @@ $tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE bi_khoa = 1")
   </div>
 </div>
 
-<!-- FORM THÊM TÀI KHOẢN -->
-<?php if ($show_form): ?>
-<div class="admin-card mb-4">
-  <div class="card-title">Thêm tài khoản khách hàng</div>
-  <form method="POST" action="/nhasach/admin/users.php" novalidate>
-    <input type="hidden" name="action" value="create_user">
-    <div class="row g-3">
-      <div class="col-md-4">
-        <label class="form-label fw-semibold" style="font-size:.85rem;">Họ tên *</label>
-        <input type="text" name="ho_ten"
-               class="form-control <?= isset($errors['ho_ten']) ? 'is-invalid' : '' ?>"
-               value="<?= htmlspecialchars($old['ho_ten'] ?? '') ?>"
-               placeholder="Nguyễn Văn A">
-        <?php if (isset($errors['ho_ten'])): ?><div class="invalid-feedback"><?= $errors['ho_ten'] ?></div><?php endif; ?>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label fw-semibold" style="font-size:.85rem;">Email *</label>
-        <input type="email" name="email"
-               class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>"
-               value="<?= htmlspecialchars($old['email'] ?? '') ?>"
-               placeholder="example@gmail.com">
-        <?php if (isset($errors['email'])): ?><div class="invalid-feedback"><?= $errors['email'] ?></div><?php endif; ?>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label fw-semibold" style="font-size:.85rem;">Mật khẩu *</label>
-        <input type="text" name="mat_khau"
-               class="form-control <?= isset($errors['mat_khau']) ? 'is-invalid' : '' ?>"
-               value="<?= htmlspecialchars($old['mat_khau'] ?? '') ?>"
-               placeholder="Tối thiểu 6 ký tự">
-        <?php if (isset($errors['mat_khau'])): ?><div class="invalid-feedback"><?= $errors['mat_khau'] ?></div><?php endif; ?>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label fw-semibold" style="font-size:.85rem;">Số điện thoại</label>
-        <input type="text" name="so_dien_thoai" class="form-control"
-               value="<?= htmlspecialchars($old['so_dien_thoai'] ?? '') ?>"
-               placeholder="0901234567">
-      </div>
-      <div class="col-md-8">
-        <label class="form-label fw-semibold" style="font-size:.85rem;">Địa chỉ</label>
-        <input type="text" name="dia_chi" class="form-control"
-               value="<?= htmlspecialchars($old['dia_chi'] ?? '') ?>"
-               placeholder="Số nhà, đường, phường, quận, TP...">
-      </div>
-      <div class="col-12 d-flex gap-2">
-        <button type="submit" class="btn btn-sm px-4"
-                style="background:#f4a261;color:#fff;border:none;border-radius:8px;">
-          <i class="bi bi-plus-lg me-1"></i>Thêm tài khoản
-        </button>
-        <a href="/nhasach/admin/users.php" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">Huỷ</a>
-      </div>
-    </div>
-  </form>
-</div>
-<?php endif; ?>
-
 <!-- BỘ LỌC -->
 <div class="admin-card mb-3">
   <form method="GET" action="/nhasach/admin/users.php" class="row g-2 align-items-end">
@@ -214,7 +132,7 @@ $tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE bi_khoa = 1")
 
 <!-- BẢNG NGƯỜI DÙNG -->
 <div class="admin-card">
-  <div class="card-title">Danh sách khách hàng (<?= count($users) ?>)</div>
+  <div class="card-title">Danh sách khách hàng (<?= $total ?> — trang <?= $trang_hien ?>/<?= $total_page ?>)</div>
 
   <?php if (empty($users)): ?>
     <p class="text-muted text-center py-4">Không có tài khoản nào.</p>
@@ -289,6 +207,25 @@ $tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE bi_khoa = 1")
         </tbody>
       </table>
     </div>
+
+    <?php if ($total_page > 1): ?>
+    <nav class="d-flex justify-content-center mt-3">
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item <?= $trang_hien <= 1 ? 'disabled' : '' ?>">
+          <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['trang' => $trang_hien - 1])) ?>"><i class="bi bi-chevron-left"></i></a>
+        </li>
+        <?php for ($p = max(1, $trang_hien - 2); $p <= min($total_page, $trang_hien + 2); $p++): ?>
+          <li class="page-item <?= $p === $trang_hien ? 'active' : '' ?>">
+            <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['trang' => $p])) ?>"><?= $p ?></a>
+          </li>
+        <?php endfor; ?>
+        <li class="page-item <?= $trang_hien >= $total_page ? 'disabled' : '' ?>">
+          <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['trang' => $trang_hien + 1])) ?>"><i class="bi bi-chevron-right"></i></a>
+        </li>
+      </ul>
+    </nav>
+    <?php endif; ?>
+
   <?php endif; ?>
 </div>
 
