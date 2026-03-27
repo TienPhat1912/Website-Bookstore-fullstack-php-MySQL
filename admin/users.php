@@ -163,7 +163,7 @@ $tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE bi_khoa = 1")
               <?= isset($u['ngay_tao']) ? date('d/m/Y', strtotime($u['ngay_tao'])) : '—' ?>
             </td>
             <td class="text-center">
-              <a href="/nhasach/admin/orders.php?search=<?= urlencode($u['email']) ?>"
+              <a href="/nhasach/admin/orders.php?search=<?= urlencode($u['ho_ten']) ?>"
                  class="badge bg-light text-dark border text-decoration-none">
                 <?= $u['so_don'] ?> đơn
               </a>

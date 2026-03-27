@@ -7,7 +7,7 @@ require_once 'includes/admin_header.php';
 $tong_sach     = $pdo->query("SELECT COUNT(*) FROM sach")->fetchColumn();
 $tong_don      = $pdo->query("SELECT COUNT(*) FROM don_hang")->fetchColumn();
 $don_cho       = $pdo->query("SELECT COUNT(*) FROM don_hang WHERE trang_thai = 'cho_xu_ly'")->fetchColumn();
-$doanh_thu     = $pdo->query("SELECT COALESCE(SUM(tong_tien),0) FROM don_hang WHERE trang_thai != 'da_huy'")->fetchColumn();
+$doanh_thu     = $pdo->query("SELECT COALESCE(SUM(tong_tien),0) FROM don_hang WHERE trang_thai IN ('da_xac_nhan','da_giao')")->fetchColumn();
 $tong_kh       = $pdo->query("SELECT COUNT(*) FROM khach_hang")->fetchColumn();
 $het_hang      = $pdo->query("SELECT COUNT(*) FROM sach WHERE so_luong = 0 AND hien_trang = 1")->fetchColumn();
 $sap_het       = $pdo->query("SELECT COUNT(*) FROM sach WHERE so_luong > 0 AND so_luong <= 5 AND hien_trang = 1")->fetchColumn();
@@ -24,7 +24,7 @@ $don_moi = $pdo->query("
 $doanh_thu_7ngay = $pdo->query("
     SELECT DATE(ngay_dat) AS ngay, SUM(tong_tien) AS tong
     FROM don_hang
-    WHERE trang_thai != 'da_huy'
+    WHERE trang_thai IN ('da_xac_nhan','da_giao')
       AND ngay_dat >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
     GROUP BY DATE(ngay_dat)
     ORDER BY ngay ASC

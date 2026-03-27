@@ -3,12 +3,23 @@ ob_start();
 $page_title = 'Tồn kho';
 require_once 'includes/admin_header.php';
 
+// ---- MỨC CẢNH BÁO HẾT HÀNG ----
+if (isset($_POST['doi_muc_canh_bao'])) {
+    $muc_moi = max(1, (int)$_POST['muc_canh_bao']);
+    $_SESSION['muc_canh_bao'] = $muc_moi;
+    header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?') . ($_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : ''));
+    exit;
+}
+$muc_canh_bao = (int)($_SESSION['muc_canh_bao'] ?? 5);
+
 // ---- THỐNG KÊ TỔNG QUAN (luôn theo thực tế hiện tại) ----
 $tong_sach   = $pdo->query("SELECT COUNT(*) FROM sach WHERE hien_trang = 1")->fetchColumn();
 $tong_ton    = $pdo->query("SELECT COALESCE(SUM(so_luong),0) FROM sach WHERE hien_trang = 1")->fetchColumn();
 $gia_tri_kho = $pdo->query("SELECT COALESCE(SUM(so_luong * gia_nhap),0) FROM sach WHERE hien_trang = 1")->fetchColumn();
 $so_het_hang = $pdo->query("SELECT COUNT(*) FROM sach WHERE so_luong = 0 AND hien_trang = 1")->fetchColumn();
-$so_sap_het  = $pdo->query("SELECT COUNT(*) FROM sach WHERE so_luong > 0 AND so_luong <= 5 AND hien_trang = 1")->fetchColumn();
+$stmt_sap = $pdo->prepare("SELECT COUNT(*) FROM sach WHERE so_luong > 0 AND so_luong <= ? AND hien_trang = 1");
+$stmt_sap->execute([$muc_canh_bao]);
+$so_sap_het = $stmt_sap->fetchColumn();
 
 // ---- BỘ LỌC ----
 $filter_search  = trim($_GET['search']    ?? '');
@@ -78,8 +89,8 @@ if ($filter_tl > 0) {
 // Lọc trạng thái tồn kho theo thời điểm cần HAVING
 $having = "";
 if ($filter_tt === 'het')     $having = "HAVING ton_kho = 0";
-if ($filter_tt === 'sap_het') $having = "HAVING ton_kho > 0 AND ton_kho <= 5";
-if ($filter_tt === 'con')     $having = "HAVING ton_kho > 5";
+if ($filter_tt === 'sap_het') $having = "HAVING ton_kho > 0 AND ton_kho <= $muc_canh_bao";
+if ($filter_tt === 'con')     $having = "HAVING ton_kho > $muc_canh_bao";
 
 $where_sql = implode(' AND ', $where);
 
@@ -137,7 +148,19 @@ function inv_url(array $override = []): string {
 
 <div class="page-header">
   <h5><i class="bi bi-boxes me-2" style="color:#f4a261;"></i>Tồn kho</h5>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2 flex-wrap">
+    <button type="button" class="btn btn-sm btn-outline-primary" style="border-radius:8px;"
+            onclick="togglePanel('panelTonKho')">
+      <i class="bi bi-search me-1"></i>Tra cứu tồn kho
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-info" style="border-radius:8px;"
+            onclick="togglePanel('panelNhapXuat')">
+      <i class="bi bi-arrow-left-right me-1"></i>Tra cứu nhập xuất
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-warning" style="border-radius:8px;"
+            onclick="togglePanel('panelCanhBao')">
+      <i class="bi bi-bell me-1"></i>Cảnh báo: ≤<?= $muc_canh_bao ?>
+    </button>
     <a href="/nhasach/admin/inventory_report.php" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
       <i class="bi bi-bar-chart me-1"></i>Báo cáo
     </a>
@@ -146,6 +169,206 @@ function inv_url(array $override = []): string {
       <i class="bi bi-box-arrow-in-down me-1"></i>Nhập hàng
     </a>
   </div>
+</div>
+
+<script>
+function togglePanel(id) {
+  document.querySelectorAll('.inv-panel').forEach(p => {
+    if (p.id !== id) { p.style.display = 'none'; }
+  });
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+
+<!-- PANEL: Tra cứu tồn kho -->
+<div id="panelTonKho" class="inv-panel admin-card mb-3" style="display:none;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="fw-semibold" style="color:#5b9fff;"><i class="bi bi-search me-2"></i>Tra cứu tồn kho tại thời điểm</div>
+    <button type="button" class="btn-close" onclick="togglePanel('panelTonKho')"></button>
+  </div>
+  <form method="GET" action="/nhasach/admin/inventory.php">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label fw-semibold" style="font-size:.8rem;">Tìm sách</label>
+        <input type="text" name="search" class="form-control form-control-sm"
+               placeholder="Tên hoặc mã sách..."
+               value="<?= htmlspecialchars($filter_search) ?>">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label fw-semibold" style="font-size:.8rem;">Thể loại</label>
+        <select name="the_loai" class="form-select form-select-sm">
+          <option value="">Tất cả</option>
+          <?php foreach ($the_loais as $tl): ?>
+            <option value="<?= $tl['id'] ?>" <?= $filter_tl == $tl['id'] ? 'selected' : '' ?>>
+              <?= htmlspecialchars($tl['ten']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label fw-semibold" style="font-size:.8rem;">Trạng thái</label>
+        <select name="trang_thai" class="form-select form-select-sm">
+          <option value="tat_ca">Tất cả</option>
+          <option value="het">Hết hàng</option>
+          <option value="sap_het">Sắp hết (≤<?= $muc_canh_bao ?>)</option>
+          <option value="con">Còn hàng</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label fw-semibold" style="font-size:.8rem;">
+          Tại thời điểm
+          <small class="text-muted fw-normal">(để trống = hiện tại)</small>
+        </label>
+        <input type="date" name="ngay" class="form-control form-control-sm"
+               value="<?= htmlspecialchars($filter_ngay) ?>">
+      </div>
+      <div class="col-md-auto">
+        <button type="submit" class="btn btn-sm btn-primary" style="border-radius:8px;">
+          <i class="bi bi-search me-1"></i>Tra cứu
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- PANEL: Tra cứu nhập xuất -->
+<div id="panelNhapXuat" class="inv-panel admin-card mb-3" style="display:none;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="fw-semibold" style="color:#3fe0a0;"><i class="bi bi-arrow-left-right me-2"></i>Tra cứu nhập xuất theo khoảng thời gian</div>
+    <button type="button" class="btn-close" onclick="togglePanel('panelNhapXuat')"></button>
+  </div>
+  <form method="GET" action="/nhasach/admin/inventory_detail.php">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:.8rem;">Chọn sản phẩm <span class="text-danger">*</span></label>
+        <?php
+        $ds_sach = $pdo->query("SELECT id, ma_sach, ten FROM sach WHERE hien_trang = 1 ORDER BY ten")->fetchAll();
+        ?>
+        <div style="position:relative;">
+          <input type="text" id="sachSearch" class="form-control form-control-sm"
+                 placeholder="Nhập tên hoặc mã sách..."
+                 autocomplete="off">
+          <input type="hidden" name="id" id="sachId">
+          <div id="sachDropdown" style="
+            display:none; position:absolute; z-index:999; background:#fff;
+            border:1px solid #dee2e6; border-radius:8px; width:100%;
+            max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.1);
+            top:calc(100% + 4px); left:0;
+          "></div>
+        </div>
+        <script>
+        var _sachData = <?= json_encode(array_map(fn($s) => ['id' => $s['id'], 'ten' => $s['ten'], 'ma' => $s['ma_sach']], $ds_sach)) ?>;
+
+        function initSachSearch() {
+          var input    = document.getElementById('sachSearch');
+          var hidden   = document.getElementById('sachId');
+          var dropdown = document.getElementById('sachDropdown');
+          if (!input || input._init) return;
+          input._init = true;
+
+          function renderList(items) {
+            dropdown.innerHTML = '';
+            if (!items.length) {
+              dropdown.innerHTML = '<div style="padding:10px 14px;color:#999;font-size:.83rem;">Không tìm thấy</div>';
+            } else {
+              items.slice(0, 30).forEach(function(s) {
+                var div = document.createElement('div');
+                div.style.cssText = 'padding:8px 14px;cursor:pointer;font-size:.85rem;border-bottom:1px solid #f3f3f3;';
+                div.innerHTML = '<span style="font-weight:600;">' + s.ten + '</span> <small style="color:#aaa;">' + s.ma + '</small>';
+                div.addEventListener('mousedown', function() {
+                  input.value  = s.ten + ' (' + s.ma + ')';
+                  hidden.value = s.id;
+                  input.style.borderColor = '';
+                  dropdown.style.display = 'none';
+                });
+                div.addEventListener('mouseover', function() { div.style.background = '#fff8f3'; });
+                div.addEventListener('mouseout',  function() { div.style.background = ''; });
+                dropdown.appendChild(div);
+              });
+            }
+            dropdown.style.display = 'block';
+          }
+
+          input.addEventListener('input', function() {
+            hidden.value = '';
+            var q = this.value.trim().toLowerCase();
+            if (!q) { dropdown.style.display = 'none'; return; }
+            renderList(_sachData.filter(function(s) {
+              return s.ten.toLowerCase().indexOf(q) >= 0 || s.ma.toLowerCase().indexOf(q) >= 0;
+            }));
+          });
+
+          input.addEventListener('focus', function() {
+            if (this.value.trim()) this.dispatchEvent(new Event('input'));
+          });
+
+          document.addEventListener('click', function(e) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target))
+              dropdown.style.display = 'none';
+          });
+
+          input.closest('form').addEventListener('submit', function(e) {
+            if (!hidden.value) {
+              e.preventDefault();
+              input.style.borderColor = '#e63946';
+              input.focus();
+            } else {
+              input.style.borderColor = '';
+            }
+          });
+        }
+
+        // Chạy ngay khi DOM xong, và cả khi panel được mở
+        document.addEventListener('DOMContentLoaded', initSachSearch);
+        document.addEventListener('click', function(e) {
+          if (e.target.closest('[onclick*="panelNhapXuat"]')) {
+            setTimeout(initSachSearch, 50);
+          }
+        });
+        </script>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label fw-semibold" style="font-size:.8rem;">Từ ngày <span class="text-danger">*</span></label>
+        <input type="date" name="tu_ngay" class="form-control form-control-sm" required>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label fw-semibold" style="font-size:.8rem;">Đến ngày <span class="text-danger">*</span></label>
+        <input type="date" name="den_ngay" class="form-control form-control-sm" required>
+      </div>
+      <div class="col-md-auto">
+        <button type="submit" class="btn btn-sm" style="background:#3fe0a0;color:#fff;border-radius:8px;">
+          <i class="bi bi-search me-1"></i>Tra cứu
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- PANEL: Mức cảnh báo -->
+<div id="panelCanhBao" class="inv-panel admin-card mb-3" style="display:none;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="fw-semibold" style="color:#ff9f1c;"><i class="bi bi-bell me-2"></i>Thay đổi mức cảnh báo hết hàng</div>
+    <button type="button" class="btn-close" onclick="togglePanel('panelCanhBao')"></button>
+  </div>
+  <form method="POST" action="/nhasach/admin/inventory.php?<?= htmlspecialchars($_SERVER['QUERY_STRING'] ?? '') ?>">
+    <input type="hidden" name="doi_muc_canh_bao" value="1">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label fw-semibold" style="font-size:.8rem;">
+          Ngưỡng cảnh báo
+          <small class="text-muted fw-normal">(tồn ≤ ngưỡng → Sắp hết)</small>
+        </label>
+        <input type="number" name="muc_canh_bao" class="form-control form-control-sm"
+               min="1" max="9999" value="<?= $muc_canh_bao ?>" required>
+      </div>
+      <div class="col-md-auto">
+        <button type="submit" class="btn btn-sm btn-warning" style="border-radius:8px;">
+          <i class="bi bi-check2 me-1"></i>Lưu
+        </button>
+      </div>
+    </div>
+  </form>
 </div>
 
 <!-- TỔNG QUAN -->
@@ -178,77 +401,6 @@ function inv_url(array $override = []): string {
   </div>
 </div>
 
-<!-- BỘ LỌC -->
-<div class="admin-card mb-3">
-  <form method="GET" action="/nhasach/admin/inventory.php" class="row g-2 align-items-end">
-    <div class="col-md-3">
-      <label class="form-label fw-semibold" style="font-size:.8rem;">Tìm sách</label>
-      <input type="text" name="search" class="form-control form-control-sm"
-             placeholder="Tên hoặc mã sách..."
-             value="<?= htmlspecialchars($filter_search) ?>">
-    </div>
-    <div class="col-md-2">
-      <label class="form-label fw-semibold" style="font-size:.8rem;">Thể loại</label>
-      <select name="the_loai" class="form-select form-select-sm">
-        <option value="">Tất cả</option>
-        <?php foreach ($the_loais as $tl): ?>
-          <option value="<?= $tl['id'] ?>" <?= $filter_tl == $tl['id'] ? 'selected' : '' ?>>
-            <?= htmlspecialchars($tl['ten']) ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <div class="col-md-2">
-      <label class="form-label fw-semibold" style="font-size:.8rem;">Trạng thái</label>
-      <select name="trang_thai" class="form-select form-select-sm">
-        <option value="tat_ca"  <?= $filter_tt=='tat_ca' ?'selected':'' ?>>Tất cả</option>
-        <option value="het"     <?= $filter_tt=='het'    ?'selected':'' ?>>Hết hàng</option>
-        <option value="sap_het" <?= $filter_tt=='sap_het'?'selected':'' ?>>Sắp hết (≤5)</option>
-        <option value="con"     <?= $filter_tt=='con'    ?'selected':'' ?>>Còn hàng (>5)</option>
-      </select>
-    </div>
-    <div class="col-md-2">
-      <label class="form-label fw-semibold" style="font-size:.8rem;">
-        Tra cứu tại thời điểm
-        <i class="bi bi-info-circle text-muted ms-1" title="Tính tồn kho theo lượng nhập - xuất đến ngày này"></i>
-      </label>
-      <input type="date" name="ngay" class="form-control form-control-sm"
-             value="<?= htmlspecialchars($filter_ngay) ?>"
-             >
-    </div>
-    <div class="col-md-2">
-      <label class="form-label fw-semibold" style="font-size:.8rem;">Sắp xếp</label>
-      <select name="sort" class="form-select form-select-sm">
-        <option value="ton_asc"      <?= $filter_sort=='ton_asc'      ?'selected':'' ?>>Tồn kho tăng</option>
-        <option value="ton_desc"     <?= $filter_sort=='ton_desc'     ?'selected':'' ?>>Tồn kho giảm</option>
-        <option value="gia_nhap_asc" <?= $filter_sort=='gia_nhap_asc' ?'selected':'' ?>>Giá vốn tăng</option>
-        <option value="gia_nhap_desc"<?= $filter_sort=='gia_nhap_desc'?'selected':'' ?>>Giá vốn giảm</option>
-        <option value="gia_ban_asc"  <?= $filter_sort=='gia_ban_asc'  ?'selected':'' ?>>Giá bán tăng</option>
-        <option value="gia_ban_desc" <?= $filter_sort=='gia_ban_desc' ?'selected':'' ?>>Giá bán giảm</option>
-        <option value="tt_chua"      <?= $filter_sort=='tt_chua'      ?'selected':'' ?>>Chưa nhập hàng</option>
-        <option value="tt_het"       <?= $filter_sort=='tt_het'       ?'selected':'' ?>>Hết hàng trước</option>
-      </select>
-    </div>
-    <div class="col-md-1 d-flex gap-2 align-items-end">
-      <button type="submit" class="btn btn-sm btn-primary" style="border-radius:8px;">
-        <i class="bi bi-funnel me-1"></i>Lọc
-      </button>
-      <a href="/nhasach/admin/inventory.php" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
-        Xoá lọc
-      </a>
-    </div>
-  </form>
-  <?php if ($use_date): ?>
-    <div class="mt-2 px-1">
-      <small class="text-warning">
-        <i class="bi bi-clock-history me-1"></i>
-        Đang xem tồn kho tại thời điểm <strong><?= date('d/m/Y', strtotime($filter_ngay)) ?></strong>
-        — kết quả dựa trên lịch sử nhập/xuất đến ngày đó.
-      </small>
-    </div>
-  <?php endif; ?>
-</div>
-
 <!-- BẢNG TỒN KHO -->
 <div class="admin-card">
   <div class="d-flex justify-content-between align-items-center mb-3">
@@ -258,6 +410,21 @@ function inv_url(array $override = []): string {
         (<?= $total ?> sách — trang <?= $trang_hien ?>/<?= $total_page ?>)
       </span>
     </div>
+    <form method="GET" action="/nhasach/admin/inventory.php" class="d-flex align-items-center gap-2">
+      <?php foreach ($_GET as $k => $v): if ($k === 'sort') continue; ?>
+        <input type="hidden" name="<?= htmlspecialchars($k) ?>" value="<?= htmlspecialchars($v) ?>">
+      <?php endforeach; ?>
+      <select name="sort" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="ton_asc"       <?= $filter_sort=='ton_asc'       ?'selected':'' ?>>Tồn kho tăng</option>
+        <option value="ton_desc"      <?= $filter_sort=='ton_desc'       ?'selected':'' ?>>Tồn kho giảm</option>
+        <option value="gia_nhap_asc"  <?= $filter_sort=='gia_nhap_asc'  ?'selected':'' ?>>Giá vốn tăng</option>
+        <option value="gia_nhap_desc" <?= $filter_sort=='gia_nhap_desc' ?'selected':'' ?>>Giá vốn giảm</option>
+        <option value="gia_ban_asc"   <?= $filter_sort=='gia_ban_asc'   ?'selected':'' ?>>Giá bán tăng</option>
+        <option value="gia_ban_desc"  <?= $filter_sort=='gia_ban_desc'  ?'selected':'' ?>>Giá bán giảm</option>
+        <option value="tt_chua"       <?= $filter_sort=='tt_chua'       ?'selected':'' ?>>Chưa nhập hàng</option>
+        <option value="tt_het"        <?= $filter_sort=='tt_het'        ?'selected':'' ?>>Hết hàng trước</option>
+      </select>
+    </form>
   </div>
 
   <?php if (empty($sachs)): ?>
@@ -292,7 +459,7 @@ function inv_url(array $override = []): string {
             <td class="text-center">
               <?php if ($ton <= 0): ?>
                 <span class="badge bg-danger">Hết hàng</span>
-              <?php elseif ($ton <= 5): ?>
+              <?php elseif ($ton <= $muc_canh_bao): ?>
                 <span class="badge bg-warning text-dark"><?= $ton ?> <?= htmlspecialchars($s['don_vi_tinh']) ?></span>
               <?php else: ?>
                 <span class="badge bg-success"><?= number_format($ton) ?> <?= htmlspecialchars($s['don_vi_tinh']) ?></span>
@@ -312,8 +479,8 @@ function inv_url(array $override = []): string {
                 <span class="badge bg-light text-secondary border">Chưa nhập hàng</span>
               <?php elseif ($ton <= 0): ?>
                 <span class="badge bg-danger">Hết kho</span>
-              <?php elseif ($ton <= 5): ?>
-                <span class="badge bg-warning text-dark">Sắp hết</span>
+              <?php elseif ($ton <= $muc_canh_bao): ?>
+                <span class="badge bg-warning text-dark">Sắp hết (≤<?= $muc_canh_bao ?>)</span>
               <?php else: ?>
                 <span class="badge bg-success">Bình thường</span>
               <?php endif; ?>

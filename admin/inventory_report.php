@@ -27,7 +27,7 @@ $ban_thang = $pdo->query("
            COUNT(*) AS so_don,
            SUM(tong_tien) AS doanh_thu
     FROM don_hang
-    WHERE trang_thai != 'da_huy'
+    WHERE trang_thai IN ('da_xac_nhan','da_giao')
       AND ngay_dat >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
     GROUP BY DATE_FORMAT(ngay_dat, '%Y-%m')
     ORDER BY thang DESC
@@ -60,7 +60,7 @@ $top_ton = $pdo->query("
 // ---- THỐNG KÊ TỔNG ----
 $doanh_thu_thang = $pdo->prepare("
     SELECT COALESCE(SUM(tong_tien),0) FROM don_hang
-    WHERE trang_thai != 'da_huy'
+    WHERE trang_thai IN ('da_xac_nhan','da_giao')
       AND DATE_FORMAT(ngay_dat,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m')
 ");
 $doanh_thu_thang->execute();
@@ -107,7 +107,7 @@ $chi_nhap_thang = $pdo->query("
   <div class="col-6 col-lg-3">
     <div class="admin-card text-center py-3">
       <div style="font-size:1.3rem;font-weight:700;color:#5b9fff;">
-        <?= $pdo->query("SELECT COUNT(*) FROM don_hang WHERE trang_thai != 'da_huy' AND DATE_FORMAT(ngay_dat,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m')")->fetchColumn() ?>
+        <?= $pdo->query("SELECT COUNT(*) FROM don_hang WHERE trang_thai IN ('da_xac_nhan','da_giao') AND DATE_FORMAT(ngay_dat,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m')")->fetchColumn() ?>
       </div>
       <div style="font-size:.8rem;color:#888;">Đơn hàng tháng này</div>
     </div>
