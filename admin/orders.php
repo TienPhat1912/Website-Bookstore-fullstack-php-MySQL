@@ -1,4 +1,55 @@
 <?php
+// ---- AJAX: CẬP NHẬT TRẠNG THÁI (phải đứng trước ob_start và header) ----
+if (isset($_GET['action']) && isset($_GET['id']) && !empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    if (!isset($_SESSION['admin_id'])) { echo json_encode(['ok'=>false,'msg'=>'Chưa đăng nhập.','trang_thai'=>'']); exit; }
+    require_once dirname(__DIR__) . '/config/database.php';
+
+    $id     = (int)$_GET['id'];
+    $act    = $_GET['action'];
+    $new_tt = null;
+
+    if ($act === 'xac_nhan') $new_tt = 'da_xac_nhan';
+    if ($act === 'da_giao')  $new_tt = 'da_giao';
+    if ($act === 'huy')      $new_tt = 'da_huy';
+
+    $result = ['ok' => false, 'msg' => 'Hành động không hợp lệ.', 'trang_thai' => ''];
+
+    if ($new_tt) {
+        $don = $pdo->prepare("SELECT trang_thai FROM don_hang WHERE id = ?");
+        $don->execute([$id]);
+        $don = $don->fetch();
+
+        if ($don) {
+            $tt_cu = $don['trang_thai'];
+            if ($new_tt === 'da_huy') {
+                if (in_array($tt_cu, ['cho_xu_ly', 'da_xac_nhan'])) {
+                    $ct = $pdo->prepare("SELECT sach_id, so_luong FROM chi_tiet_don_hang WHERE don_hang_id = ?");
+                    $ct->execute([$id]);
+                    foreach ($ct->fetchAll() as $row) {
+                        $pdo->prepare("UPDATE sach SET so_luong = so_luong + ? WHERE id = ?")
+                            ->execute([$row['so_luong'], $row['sach_id']]);
+                    }
+                    $pdo->prepare("UPDATE don_hang SET trang_thai = ? WHERE id = ?")->execute([$new_tt, $id]);
+                    $result = ['ok' => true, 'msg' => 'Đơn đã huỷ. Tồn kho đã hoàn lại.', 'trang_thai' => $new_tt];
+                } else {
+                    $result = ['ok' => false, 'msg' => 'Không thể huỷ đơn đã giao.', 'trang_thai' => $tt_cu];
+                }
+            } else {
+                $pdo->prepare("UPDATE don_hang SET trang_thai = ? WHERE id = ?")->execute([$new_tt, $id]);
+                $result = ['ok' => true, 'msg' => 'Đã cập nhật trạng thái.', 'trang_thai' => $new_tt];
+            }
+        } else {
+            $result['msg'] = 'Không tìm thấy đơn hàng.';
+        }
+    }
+
+    if (ob_get_level() > 0) ob_clean();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($result, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 ob_start();
 $page_title = 'Đơn hàng';
 require_once 'includes/admin_header.php';
@@ -10,7 +61,7 @@ $trang_thai_info = [
     'da_huy'      => ['label' => 'Đã huỷ',       'class' => 'bg-danger text-white', 'icon' => 'bi-x-circle'],
 ];
 
-// ---- CẬP NHẬT TRẠNG THÁI ----
+// ---- CẬP NHẬT TRẠNG THÁI (non-AJAX fallback) ----
 if (isset($_GET['action']) && isset($_GET['id'])) {
     $id     = (int)$_GET['id'];
     $act    = $_GET['action'];
@@ -24,30 +75,27 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
         $don = $pdo->prepare("SELECT trang_thai FROM don_hang WHERE id = ?");
         $don->execute([$id]);
         $don = $don->fetch();
-        if (!$don) { header("Location: /nhasach/admin/orders.php"); exit; }
-
-        $tt_cu = $don['trang_thai'];
-
-        if ($new_tt === 'da_huy') {
-            if (in_array($tt_cu, ['cho_xu_ly', 'da_xac_nhan'])) {
-                // Hoàn lại tồn kho (đã trừ lúc đặt hàng)
-                $ct = $pdo->prepare("SELECT sach_id, so_luong FROM chi_tiet_don_hang WHERE don_hang_id = ?");
-                $ct->execute([$id]);
-                foreach ($ct->fetchAll() as $row) {
-                    $pdo->prepare("UPDATE sach SET so_luong = so_luong + ? WHERE id = ?")
-                        ->execute([$row['so_luong'], $row['sach_id']]);
+        if ($don) {
+            $tt_cu = $don['trang_thai'];
+            if ($new_tt === 'da_huy') {
+                if (in_array($tt_cu, ['cho_xu_ly', 'da_xac_nhan'])) {
+                    $ct = $pdo->prepare("SELECT sach_id, so_luong FROM chi_tiet_don_hang WHERE don_hang_id = ?");
+                    $ct->execute([$id]);
+                    foreach ($ct->fetchAll() as $row) {
+                        $pdo->prepare("UPDATE sach SET so_luong = so_luong + ? WHERE id = ?")
+                            ->execute([$row['so_luong'], $row['sach_id']]);
+                    }
+                    $pdo->prepare("UPDATE don_hang SET trang_thai = ? WHERE id = ?")->execute([$new_tt, $id]);
+                    $_SESSION['flash'] = ['type' => 'warning', 'msg' => 'Đơn đã huỷ. Tồn kho đã hoàn lại.'];
+                } else {
+                    $_SESSION['flash'] = ['type' => 'danger', 'msg' => 'Không thể huỷ đơn đã giao.'];
                 }
-                $pdo->prepare("UPDATE don_hang SET trang_thai = ? WHERE id = ?")->execute([$new_tt, $id]);
-                $_SESSION['flash'] = ['type' => 'warning', 'msg' => 'Đơn đã huỷ. Tồn kho đã hoàn lại.'];
             } else {
-                $_SESSION['flash'] = ['type' => 'danger', 'msg' => 'Không thể huỷ đơn đã giao.'];
+                $pdo->prepare("UPDATE don_hang SET trang_thai = ? WHERE id = ?")->execute([$new_tt, $id]);
+                $_SESSION['flash'] = ['type' => 'success', 'msg' => 'Đã cập nhật trạng thái.'];
             }
-        } else {
-            $pdo->prepare("UPDATE don_hang SET trang_thai = ? WHERE id = ?")->execute([$new_tt, $id]);
-            $_SESSION['flash'] = ['type' => 'success', 'msg' => 'Đã cập nhật trạng thái đơn hàng.'];
         }
     }
-
     $redirect = isset($_GET['from_detail']) ? "/nhasach/admin/orders.php?id=$id" : "/nhasach/admin/orders.php";
     header("Location: $redirect");
     exit;
@@ -129,27 +177,25 @@ if (isset($_GET['id'])) {
           </div>
 
           <!-- Nút hành động -->
-          <div class="d-flex flex-column gap-2">
+          <div class="d-flex flex-column gap-2" id="don-actions-<?= $don['id'] ?>">
             <?php if ($don['trang_thai'] === 'cho_xu_ly'): ?>
-              <a href="/nhasach/admin/orders.php?action=xac_nhan&id=<?= $don['id'] ?>&from_detail=1"
-                 class="btn btn-sm btn-info text-white" style="border-radius:8px;">
+              <button type="button" class="btn btn-sm btn-info text-white" style="border-radius:8px;"
+                      onclick="doAction(<?= $don['id'] ?>, 'xac_nhan', this)">
                 <i class="bi bi-check-circle me-1"></i>Xác nhận đơn
-              </a>
-              <a href="/nhasach/admin/orders.php?action=huy&id=<?= $don['id'] ?>&from_detail=1"
-                 class="btn btn-sm btn-outline-danger" style="border-radius:8px;"
-                 onclick="return confirm('Huỷ đơn hàng này?')">
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:8px;"
+                      onclick="doAction(<?= $don['id'] ?>, 'huy', this, true)">
                 <i class="bi bi-x-circle me-1"></i>Huỷ đơn
-              </a>
+              </button>
             <?php elseif ($don['trang_thai'] === 'da_xac_nhan'): ?>
-              <a href="/nhasach/admin/orders.php?action=da_giao&id=<?= $don['id'] ?>&from_detail=1"
-                 class="btn btn-sm btn-success" style="border-radius:8px;">
+              <button type="button" class="btn btn-sm btn-success" style="border-radius:8px;"
+                      onclick="doAction(<?= $don['id'] ?>, 'da_giao', this)">
                 <i class="bi bi-truck me-1"></i>Đánh dấu đã giao
-              </a>
-              <a href="/nhasach/admin/orders.php?action=huy&id=<?= $don['id'] ?>&from_detail=1"
-                 class="btn btn-sm btn-outline-danger" style="border-radius:8px;"
-                 onclick="return confirm('Huỷ đơn hàng này?')">
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:8px;"
+                      onclick="doAction(<?= $don['id'] ?>, 'huy', this, true)">
                 <i class="bi bi-x-circle me-1"></i>Huỷ đơn
-              </a>
+              </button>
             <?php endif; ?>
           </div>
         </div>
@@ -402,22 +448,21 @@ foreach ($stats as $st) $stats_map[$st['trang_thai']] = $st;
                   <i class="bi bi-eye"></i>
                 </a>
                 <?php if ($don['trang_thai'] === 'cho_xu_ly'): ?>
-                  <a href="/nhasach/admin/orders.php?action=xac_nhan&id=<?= $don['id'] ?>"
-                     class="btn btn-sm btn-outline-info" style="border-radius:6px;" title="Xác nhận">
+                  <button type="button" class="btn btn-sm btn-outline-info" style="border-radius:6px;" title="Xác nhận"
+                          onclick="doAction(<?= $don['id'] ?>, 'xac_nhan', this)">
                     <i class="bi bi-check-circle"></i>
-                  </a>
+                  </button>
                 <?php elseif ($don['trang_thai'] === 'da_xac_nhan'): ?>
-                  <a href="/nhasach/admin/orders.php?action=da_giao&id=<?= $don['id'] ?>"
-                     class="btn btn-sm btn-outline-success" style="border-radius:6px;" title="Đã giao">
+                  <button type="button" class="btn btn-sm btn-outline-success" style="border-radius:6px;" title="Đã giao"
+                          onclick="doAction(<?= $don['id'] ?>, 'da_giao', this)">
                     <i class="bi bi-truck"></i>
-                  </a>
+                  </button>
                 <?php endif; ?>
                 <?php if (in_array($don['trang_thai'], ['cho_xu_ly','da_xac_nhan'])): ?>
-                  <a href="/nhasach/admin/orders.php?action=huy&id=<?= $don['id'] ?>"
-                     class="btn btn-sm btn-outline-danger" style="border-radius:6px;" title="Huỷ"
-                     onclick="return confirm('Huỷ đơn hàng này?')">
+                  <button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:6px;" title="Huỷ"
+                          onclick="doAction(<?= $don['id'] ?>, 'huy', this, true)">
                     <i class="bi bi-x-circle"></i>
-                  </a>
+                  </button>
                 <?php endif; ?>
               </div>
             </td>
@@ -447,6 +492,114 @@ foreach ($stats as $st) $stats_map[$st['trang_thai']] = $st;
 
   <?php endif; ?>
 </div>
+
+<!-- Toast thông báo -->
+<div id="orderToast" style="
+  position:fixed; bottom:24px; right:24px; z-index:9999;
+  background:#1a1a2e; color:#fff; padding:12px 20px; border-radius:10px;
+  box-shadow:0 4px 16px rgba(0,0,0,.25); font-size:.88rem;
+  display:none; align-items:center; gap:10px; min-width:220px;
+">
+  <i id="orderToastIcon" class="bi"></i>
+  <span id="orderToastMsg"></span>
+</div>
+
+<script>
+var ttInfo = {
+  cho_xu_ly:   { label: 'Chờ xử lý',   cls: 'bg-warning text-dark' },
+  da_xac_nhan: { label: 'Đã xác nhận',  cls: 'bg-info text-white'   },
+  da_giao:     { label: 'Đã giao',       cls: 'bg-success text-white'},
+  da_huy:      { label: 'Đã huỷ',       cls: 'bg-danger text-white' }
+};
+
+function showToast(msg, ok) {
+  var t = document.getElementById('orderToast');
+  var icon = document.getElementById('orderToastIcon');
+  var text = document.getElementById('orderToastMsg');
+  icon.className = 'bi ' + (ok ? 'bi-check-circle-fill text-success' : 'bi-exclamation-circle-fill text-danger');
+  text.textContent = msg;
+  t.style.display = 'flex';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.style.display = 'none'; }, 3000);
+}
+
+function doAction(id, action, btn, confirm_huy) {
+  if (confirm_huy && !confirm('Huỷ đơn hàng này?')) return;
+
+  btn.disabled = true;
+  var orig = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+  fetch('/nhasach/admin/orders.php?action=' + action + '&id=' + id, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(function(r) {
+    return r.text().then(function(text) {
+      try {
+        return JSON.parse(text);
+      } catch(e) {
+        console.error('Response không phải JSON:', text);
+        throw new Error('invalid json');
+      }
+    });
+  })
+  .then(function(data) {
+    showToast(data.msg, data.ok);
+    if (data.ok) {
+      var tt = data.trang_thai;
+      var info = ttInfo[tt] || { label: tt, cls: 'bg-secondary' };
+
+      // Cập nhật badge trạng thái trong hàng
+      var row = btn.closest('tr');
+      if (row) {
+        var badge = row.querySelector('.badge');
+        if (badge) { badge.className = 'badge ' + info.cls; badge.textContent = info.label; }
+
+        // Ẩn/hiện nút hành động
+        var actions = row.querySelector('.d-flex.gap-1');
+        if (actions) {
+          // Giữ nút xem, xoá nút action cũ
+          var btns = actions.querySelectorAll('button');
+          btns.forEach(function(b) { b.remove(); });
+
+          if (tt === 'da_xac_nhan') {
+            actions.insertAdjacentHTML('beforeend',
+              '<button type="button" class="btn btn-sm btn-outline-success" style="border-radius:6px;" title="Đã giao" onclick="doAction(' + id + ',\'da_giao\',this)">' +
+              '<i class="bi bi-truck"></i></button>' +
+              '<button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:6px;" title="Huỷ" onclick="doAction(' + id + ',\'huy\',this,true)">' +
+              '<i class="bi bi-x-circle"></i></button>');
+          }
+          // da_giao và da_huy: không có nút action
+        }
+      }
+
+      // Nếu đang ở trang chi tiết, cập nhật khu vực nút
+      var actDiv = document.getElementById('don-actions-' + id);
+      if (actDiv) {
+        actDiv.innerHTML = '';
+        if (tt === 'da_xac_nhan') {
+          actDiv.innerHTML =
+            '<button type="button" class="btn btn-sm btn-success" style="border-radius:8px;" onclick="doAction(' + id + ',\'da_giao\',this)">' +
+            '<i class="bi bi-truck me-1"></i>Đánh dấu đã giao</button>' +
+            '<button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:8px;" onclick="doAction(' + id + ',\'huy\',this,true)">' +
+            '<i class="bi bi-x-circle me-1"></i>Huỷ đơn</button>';
+        }
+        // Cập nhật badge chi tiết
+        var detailBadge = document.querySelector('.badge[class*="bg-"]');
+        if (detailBadge) { detailBadge.className = 'badge ' + info.cls + ' mt-1'; detailBadge.textContent = info.label; }
+      }
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+    showToast('Lỗi kết nối, thử lại.', false);
+  });
+}
+</script>
 
 <?php
 require_once 'includes/admin_footer.php';
