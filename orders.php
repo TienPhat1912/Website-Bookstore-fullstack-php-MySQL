@@ -30,7 +30,19 @@ if ($xem_id > 0) {
     $chi_tiets = $stmt->fetchAll();
 }
 
-// Lấy tất cả đơn hàng — mới nhất trên
+// Phân trang
+$per_page = 10;
+$trang_hien_tai = max(1, (int)($_GET['trang'] ?? 1));
+$offset = ($trang_hien_tai - 1) * $per_page;
+
+// Đếm tổng đơn
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM don_hang WHERE khach_hang_id = ?");
+$stmt->execute([$kh_id]);
+$tong_don = (int)$stmt->fetchColumn();
+$tong_trang = (int)ceil($tong_don / $per_page);
+$trang_hien_tai = min($trang_hien_tai, max(1, $tong_trang));
+
+// Lấy đơn hàng theo trang — mới nhất trên
 $stmt = $pdo->prepare("
     SELECT dh.*,
            COUNT(ct.id) AS so_sach
@@ -39,15 +51,19 @@ $stmt = $pdo->prepare("
     WHERE dh.khach_hang_id = ?
     GROUP BY dh.id
     ORDER BY dh.ngay_dat DESC
+    LIMIT ? OFFSET ?
 ");
-$stmt->execute([$kh_id]);
+$stmt->bindValue(1, $kh_id, PDO::PARAM_INT);
+$stmt->bindValue(2, $per_page, PDO::PARAM_INT);
+$stmt->bindValue(3, $offset, PDO::PARAM_INT);
+$stmt->execute();
 $don_hangs = $stmt->fetchAll();
 
 $trang_thai_info = [
-    'cho_xu_ly'   => ['label' => 'Chờ xử lý',       'class' => 'bg-warning text-dark'],
-    'da_xac_nhan' => ['label' => 'Đã xác nhận',      'class' => 'bg-info text-white'],
+    'cho_xu_ly'   => ['label' => 'Chờ xử lý',        'class' => 'bg-warning text-dark'],
+    'da_xac_nhan' => ['label' => 'Đã xác nhận',       'class' => 'bg-info text-white'],
     'da_giao'     => ['label' => 'Đã giao thành công','class' => 'bg-success text-white'],
-    'da_huy'      => ['label' => 'Đã huỷ',           'class' => 'bg-danger text-white'],
+    'da_huy'      => ['label' => 'Đã huỷ',            'class' => 'bg-danger text-white'],
 ];
 $pt_label = [
     'tien_mat'     => 'Tiền mặt (COD)',
@@ -160,8 +176,15 @@ $pt_label = [
     </div>
 
   <?php else: ?>
-    <div style="background:#fff; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); overflow:hidden;">
+    <!-- Tổng số đơn -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <small class="text-muted">
+        Hiển thị <?= $offset + 1 ?>–<?= min($offset + $per_page, $tong_don) ?>
+        trong tổng số <?= $tong_don ?> đơn hàng
+      </small>
+    </div>
 
+    <div style="background:#fff; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); overflow:hidden;">
       <?php foreach ($don_hangs as $i => $dh): ?>
         <div class="px-4 py-3 d-flex align-items-center gap-3 flex-wrap"
              style="border-bottom:<?= $i < count($don_hangs)-1 ? '1px solid #f0f0f0' : 'none' ?>;">
@@ -201,8 +224,73 @@ $pt_label = [
           </div>
         </div>
       <?php endforeach; ?>
-
     </div>
+
+    <!-- ==================== PHÂN TRANG ==================== -->
+    <?php if ($tong_trang > 1): ?>
+    <nav class="mt-4 d-flex justify-content-center">
+      <ul class="pagination pagination-sm mb-0" style="gap:4px;">
+
+        <!-- Trang trước -->
+        <li class="page-item <?= $trang_hien_tai <= 1 ? 'disabled' : '' ?>">
+          <a class="page-link" href="?trang=<?= $trang_hien_tai - 1 ?>"
+             style="border-radius:8px;">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+
+        <?php
+        // Hiển thị tối đa 5 trang, căn giữa trang hiện tại
+        $start = max(1, $trang_hien_tai - 2);
+        $end   = min($tong_trang, $start + 4);
+        $start = max(1, $end - 4);
+        ?>
+
+        <?php if ($start > 1): ?>
+          <li class="page-item">
+            <a class="page-link" href="?trang=1" style="border-radius:8px;">1</a>
+          </li>
+          <?php if ($start > 2): ?>
+            <li class="page-item disabled">
+              <span class="page-link" style="border-radius:8px;">…</span>
+            </li>
+          <?php endif; ?>
+        <?php endif; ?>
+
+        <?php for ($p = $start; $p <= $end; $p++): ?>
+          <li class="page-item <?= $p === $trang_hien_tai ? 'active' : '' ?>">
+            <a class="page-link" href="?trang=<?= $p ?>"
+               style="border-radius:8px; <?= $p === $trang_hien_tai ? 'background:#1a1a2e; border-color:#1a1a2e;' : '' ?>">
+              <?= $p ?>
+            </a>
+          </li>
+        <?php endfor; ?>
+
+        <?php if ($end < $tong_trang): ?>
+          <?php if ($end < $tong_trang - 1): ?>
+            <li class="page-item disabled">
+              <span class="page-link" style="border-radius:8px;">…</span>
+            </li>
+          <?php endif; ?>
+          <li class="page-item">
+            <a class="page-link" href="?trang=<?= $tong_trang ?>" style="border-radius:8px;">
+              <?= $tong_trang ?>
+            </a>
+          </li>
+        <?php endif; ?>
+
+        <!-- Trang sau -->
+        <li class="page-item <?= $trang_hien_tai >= $tong_trang ? 'disabled' : '' ?>">
+          <a class="page-link" href="?trang=<?= $trang_hien_tai + 1 ?>"
+             style="border-radius:8px;">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+
+      </ul>
+    </nav>
+    <?php endif; ?>
+
   <?php endif; ?>
   <?php endif; ?>
 </div>

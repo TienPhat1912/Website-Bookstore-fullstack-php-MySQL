@@ -77,25 +77,25 @@ $tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE bi_khoa = 1")
 <!-- THỐNG KÊ NHANH -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-3">
-    <div class="admin-card text-center py-3">
+    <div class="admin-card admin-stat-card text-center py-3">
       <div style="font-size:1.6rem; font-weight:700; color:#a66eff;"><?= number_format($tong_kh) ?></div>
       <div style="font-size:.8rem; color:#888;">Tổng khách hàng</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="admin-card text-center py-3">
+    <div class="admin-card admin-stat-card text-center py-3">
       <div style="font-size:1.6rem; font-weight:700; color:#e63946;"><?= number_format($tong_bi_khoa) ?></div>
       <div style="font-size:.8rem; color:#888;">Tài khoản bị khoá</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="admin-card text-center py-3">
+    <div class="admin-card admin-stat-card text-center py-3">
       <div style="font-size:1.6rem; font-weight:700; color:#3fe0a0;"><?= number_format($tong_kh - $tong_bi_khoa) ?></div>
       <div style="font-size:.8rem; color:#888;">Đang hoạt động</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="admin-card text-center py-3">
+    <div class="admin-card admin-stat-card text-center py-3">
       <div style="font-size:1.6rem; font-weight:700; color:#f4a261;">
         <?= $pdo->query("SELECT COUNT(*) FROM don_hang WHERE trang_thai = 'cho_xu_ly'")->fetchColumn() ?>
       </div>

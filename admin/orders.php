@@ -54,6 +54,115 @@ ob_start();
 $page_title = 'Đơn hàng';
 require_once 'includes/admin_header.php';
 
+
+
+function renderOrderActionScript()
+{
+    ?>
+<script>
+var ttInfo = {
+  cho_xu_ly:   { label: '\u0043\u0068\u1edd \u0078\u1eed \u006c\u00fd', cls: 'bg-warning text-dark' },
+  da_xac_nhan: { label: '\u0110\u00e3 x\u00e1c nh\u1eadn', cls: 'bg-info text-white' },
+  da_giao:     { label: '\u0110\u00e3 giao', cls: 'bg-success text-white' },
+  da_huy:      { label: '\u0110\u00e3 hu\u1ef7', cls: 'bg-danger text-white' }
+};
+
+function showToast(msg, ok) {
+  var t = document.getElementById('orderToast');
+  if (!t) return;
+
+  var icon = document.getElementById('orderToastIcon');
+  var text = document.getElementById('orderToastMsg');
+  icon.className = 'bi ' + (ok ? 'bi-check-circle-fill text-success' : 'bi-exclamation-circle-fill text-danger');
+  text.textContent = msg;
+  t.style.display = 'flex';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.style.display = 'none'; }, 3000);
+}
+
+function doAction(id, action, btn, confirm_huy) {
+  if (confirm_huy && !confirm('H\u1ee7y \u0111\u01a1n h\u00e0ng n\u00e0y?')) return;
+
+  btn.disabled = true;
+  var orig = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+  fetch('/nhasach/admin/orders.php?action=' + action + '&id=' + id, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(function(r) {
+    return r.text().then(function(text) {
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        console.error('Response kh\u00f4ng ph\u1ea3i JSON:', text);
+        throw new Error('invalid json');
+      }
+    });
+  })
+  .then(function(data) {
+    showToast(data.msg, data.ok);
+    if (data.ok) {
+      var tt = data.trang_thai;
+      var info = ttInfo[tt] || { label: tt, cls: 'bg-secondary' };
+
+      var row = btn.closest('tr');
+      if (row) {
+        var badge = row.querySelector('.badge');
+        if (badge) {
+          badge.className = 'badge ' + info.cls;
+          badge.textContent = info.label;
+        }
+
+        var actions = row.querySelector('.d-flex.gap-1');
+        if (actions) {
+          actions.querySelectorAll('button').forEach(function(actionBtn) {
+            actionBtn.remove();
+          });
+
+          if (tt === 'da_xac_nhan') {
+            actions.insertAdjacentHTML('beforeend',
+              '<button type="button" class="btn btn-sm btn-outline-success" style="border-radius:6px;" title="\u0110\u00e3 giao" onclick="doAction(' + id + ',\'da_giao\',this)">' +
+              '<i class="bi bi-truck"></i></button>' +
+              '<button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:6px;" title="H\u1ee7y" onclick="doAction(' + id + ',\'huy\',this,true)">' +
+              '<i class="bi bi-x-circle"></i></button>');
+          }
+        }
+      }
+
+      var actDiv = document.getElementById('don-actions-' + id);
+      if (actDiv) {
+        actDiv.innerHTML = '';
+
+        if (tt === 'da_xac_nhan') {
+          actDiv.innerHTML =
+            '<button type="button" class="btn btn-sm btn-success" style="border-radius:8px;" onclick="doAction(' + id + ',\'da_giao\',this)">' +
+            '<i class="bi bi-truck me-1"></i>\u0110\u00e1nh d\u1ea5u \u0111\u00e3 giao</button>' +
+            '<button type="button" class="btn btn-sm btn-outline-danger" style="border-radius:8px;" onclick="doAction(' + id + ',\'huy\',this,true)">' +
+            '<i class="bi bi-x-circle me-1"></i>H\u1ee7y \u0111\u01a1n</button>';
+        }
+
+        var detailBadge = document.querySelector('.badge[class*="bg-"]');
+        if (detailBadge) {
+          detailBadge.className = 'badge ' + info.cls + ' mt-1';
+          detailBadge.textContent = info.label;
+        }
+      }
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+    showToast('L\u1ed7i k\u1ebft n\u1ed1i, th\u1eed l\u1ea1i.', false);
+  });
+}
+</script>
+    <?php
+}
+
 $trang_thai_info = [
     'cho_xu_ly'   => ['label' => 'Chờ xử lý',   'class' => 'bg-warning text-dark', 'icon' => 'bi-hourglass-split'],
     'da_xac_nhan' => ['label' => 'Đã xác nhận',  'class' => 'bg-info text-white',   'icon' => 'bi-check-circle'],
@@ -266,7 +375,17 @@ if (isset($_GET['id'])) {
         </div>
       </div>
     </div>
+    <div id="orderToast" style="
+      position:fixed; bottom:24px; right:24px; z-index:9999;
+      background:#1a1a2e; color:#fff; padding:12px 20px; border-radius:10px;
+      box-shadow:0 4px 16px rgba(0,0,0,.25); font-size:.88rem;
+      display:none; align-items:center; gap:10px; min-width:220px;
+    ">
+      <i id="orderToastIcon" class="bi"></i>
+      <span id="orderToastMsg"></span>
+    </div>
     <?php
+    renderOrderActionScript();
     require_once 'includes/admin_footer.php';
     ob_end_flush();
     exit;
@@ -280,7 +399,7 @@ $filter_tu    = $_GET['tu_ngay']   ?? '';
 $filter_den   = $_GET['den_ngay']  ?? '';
 $filter_phuong= $_GET['phuong']    ?? '';
 $filter_search= trim($_GET['search'] ?? '');
-$per_page     = 20;
+$per_page     = 10;
 $trang_hien   = max(1, (int)($_GET['trang'] ?? 1));
 
 $where  = ["1=1"];
@@ -335,8 +454,8 @@ foreach ($stats as $st) $stats_map[$st['trang_thai']] = $st;
     $tong = $stats_map[$key]['tong'] ?? 0;
   ?>
   <div class="col-6 col-lg-3">
-    <a href="/nhasach/admin/orders.php?trang_thai=<?= $key ?>" class="text-decoration-none">
-      <div class="admin-card text-center py-3" style="cursor:pointer; <?= $filter_tt === $key ? 'border:2px solid #f4a261;' : '' ?>">
+    <a href="/nhasach/admin/orders.php?trang_thai=<?= $key ?>" class="text-decoration-none admin-stat-link">
+      <div class="admin-card admin-stat-card text-center py-3" style="cursor:pointer; <?= $filter_tt === $key ? 'border:2px solid #f4a261;' : '' ?>">
         <div style="font-size:1.5rem; font-weight:700;"><?= $cnt ?></div>
         <div><span class="badge <?= $info['class'] ?>"><?= $info['label'] ?></span></div>
         <div style="font-size:.78rem; color:#888; margin-top:4px;">

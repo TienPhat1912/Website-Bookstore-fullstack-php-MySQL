@@ -84,19 +84,19 @@ $chi_nhap_thang = $pdo->query("
 <!-- TỔNG QUAN THÁNG NÀY -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-3">
-    <div class="admin-card text-center py-3">
+    <div class="admin-card admin-stat-card text-center py-3">
       <div style="font-size:1.3rem;font-weight:700;color:#3fe0a0;"><?= number_format($doanh_thu_thang/1000000, 1) ?>tr₫</div>
       <div style="font-size:.8rem;color:#888;">Doanh thu tháng này</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="admin-card text-center py-3">
+    <div class="admin-card admin-stat-card text-center py-3">
       <div style="font-size:1.3rem;font-weight:700;color:#e63946;"><?= number_format($chi_nhap_thang/1000000, 1) ?>tr₫</div>
       <div style="font-size:.8rem;color:#888;">Chi nhập hàng tháng này</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="admin-card text-center py-3">
+    <div class="admin-card admin-stat-card text-center py-3">
       <?php $loi_nhuan = $doanh_thu_thang - $chi_nhap_thang; ?>
       <div style="font-size:1.3rem;font-weight:700;color:<?= $loi_nhuan >= 0 ? '#3fe0a0' : '#e63946' ?>;">
         <?= ($loi_nhuan >= 0 ? '+' : '') . number_format($loi_nhuan/1000000, 1) ?>tr₫
@@ -105,7 +105,7 @@ $chi_nhap_thang = $pdo->query("
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="admin-card text-center py-3">
+    <div class="admin-card admin-stat-card text-center py-3">
       <div style="font-size:1.3rem;font-weight:700;color:#5b9fff;">
         <?= $pdo->query("SELECT COUNT(*) FROM don_hang WHERE trang_thai IN ('da_xac_nhan','da_giao') AND DATE_FORMAT(ngay_dat,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m')")->fetchColumn() ?>
       </div>

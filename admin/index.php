@@ -52,15 +52,15 @@ $trang_thai_info = [
 
 <!-- STAT CARDS -->
 <div class="row g-3 mb-4">
-  <div class="col-6 col-lg-3">
-    <div class="stat-card" style="border-left-color:#5b9fff;">
+  <div class="col-6 col-lg-3 d-flex">
+    <div class="stat-card w-100" style="border-left-color:#5b9fff;">
       <div class="stat-label">Tổng sách</div>
       <div class="stat-number" style="color:#5b9fff;"><?= number_format($tong_sach) ?></div>
       <small class="text-muted"><a href="/nhasach/admin/products.php" style="color:#5b9fff;">Quản lý →</a></small>
     </div>
   </div>
-  <div class="col-6 col-lg-3">
-    <div class="stat-card" style="border-left-color:#f4a261;">
+  <div class="col-6 col-lg-3 d-flex">
+    <div class="stat-card w-100" style="border-left-color:#f4a261;">
       <div class="stat-label">Tổng đơn hàng</div>
       <div class="stat-number" style="color:#f4a261;"><?= number_format($tong_don) ?></div>
       <?php if ($don_cho > 0): ?>
@@ -70,8 +70,8 @@ $trang_thai_info = [
       <?php endif; ?>
     </div>
   </div>
-  <div class="col-6 col-lg-3">
-    <div class="stat-card" style="border-left-color:#3fe0a0;">
+  <div class="col-6 col-lg-3 d-flex">
+    <div class="stat-card w-100" style="border-left-color:#3fe0a0;">
       <div class="stat-label">Doanh thu</div>
       <div class="stat-number" style="color:#3fe0a0; font-size:1.4rem;">
         <?= number_format($doanh_thu, 0, ',', '.') ?>₫
@@ -79,8 +79,8 @@ $trang_thai_info = [
       <small class="text-muted">Không tính đơn huỷ</small>
     </div>
   </div>
-  <div class="col-6 col-lg-3">
-    <div class="stat-card" style="border-left-color:#a66eff;">
+  <div class="col-6 col-lg-3 d-flex">
+    <div class="stat-card w-100" style="border-left-color:#a66eff;">
       <div class="stat-label">Khách hàng</div>
       <div class="stat-number" style="color:#a66eff;"><?= number_format($tong_kh) ?></div>
       <small class="text-muted"><a href="/nhasach/admin/users.php" style="color:#a66eff;">Quản lý →</a></small>

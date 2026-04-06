@@ -374,25 +374,25 @@ function togglePanel(id) {
 <!-- TỔNG QUAN -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-3">
-    <div class="admin-card text-center py-3">
+    <div class="admin-card admin-stat-card text-center py-3">
       <div style="font-size:1.6rem;font-weight:700;color:#5b9fff;"><?= number_format($tong_sach) ?></div>
       <div style="font-size:.8rem;color:#888;">Đầu sách đang bán</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="admin-card text-center py-3">
+    <div class="admin-card admin-stat-card text-center py-3">
       <div style="font-size:1.6rem;font-weight:700;color:#3fe0a0;"><?= number_format($tong_ton) ?></div>
       <div style="font-size:.8rem;color:#888;">Tổng tồn kho hiện tại</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="admin-card text-center py-3">
+    <div class="admin-card admin-stat-card text-center py-3">
       <div style="font-size:1.3rem;font-weight:700;color:#f4a261;"><?= number_format($gia_tri_kho/1000000, 1) ?>tr₫</div>
       <div style="font-size:.8rem;color:#888;">Giá trị tồn kho (giá vốn)</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="admin-card text-center py-3">
+    <div class="admin-card admin-stat-card text-center py-3">
       <div style="font-size:1.6rem;font-weight:700;color:#e63946;"><?= $so_het_hang ?></div>
       <div style="font-size:.8rem;color:#888;">
         Hết hàng &nbsp;|&nbsp; <span style="color:#ff9f1c;"><?= $so_sap_het ?></span> sắp hết
@@ -426,6 +426,14 @@ function togglePanel(id) {
       </select>
     </form>
   </div>
+
+  <?php if ($use_date): ?>
+    <div class="mb-3 px-3 py-2 rounded"
+         style="background:#eef7ff; border:1px solid #b9ddff; color:#245c8a; font-size:.85rem;">
+      <i class="bi bi-calendar-event me-2"></i>
+      Đang tra cứu tồn kho tại ngày <strong><?= date('d/m/Y', strtotime($filter_ngay)) ?></strong>.
+    </div>
+  <?php endif; ?>
 
   <?php if (empty($sachs)): ?>
     <p class="text-muted text-center py-4">Không có sách nào.</p>

@@ -108,6 +108,22 @@ $nav_items = [
       letter-spacing: .1em; color: #888;
       font-weight: 600; margin-bottom: 16px;
     }
+    .admin-stat-link {
+      display: block;
+      height: 100%;
+      color: inherit;
+    }
+    .admin-stat-link:hover { color: inherit; }
+    .admin-stat-card {
+      min-height: 132px;
+      height: 100%;
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+    }
 
     /* Table */
     .admin-table { font-size: .88rem; }
