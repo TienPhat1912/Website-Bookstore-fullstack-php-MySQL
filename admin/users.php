@@ -2,6 +2,7 @@
 ob_start();
 $page_title = 'Người dùng';
 require_once 'includes/admin_header.php';
+require_once __DIR__ . '/includes/admin_search_helper.php';
 
 // ---- KHOÁ / MỞ KHOÁ ----
 if (isset($_GET['action']) && in_array($_GET['action'], ['lock','unlock']) && isset($_GET['id'])) {
@@ -37,18 +38,10 @@ $trang_hien    = max(1, (int)($_GET['trang'] ?? 1));
 
 $where  = ["1=1"];
 $params = [];
-if ($filter_search !== '') { $where[] = "(ho_ten LIKE ? OR email LIKE ? OR so_dien_thoai LIKE ?)"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; }
 if ($filter_tt === 'hoat_dong')  { $where[] = "bi_khoa = 0"; }
 if ($filter_tt === 'bi_khoa')    { $where[] = "bi_khoa = 1"; }
 
 $where_sql = implode(' AND ', $where);
-
-$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM khach_hang kh WHERE $where_sql");
-$count_stmt->execute($params);
-$total      = (int)$count_stmt->fetchColumn();
-$total_page = max(1, ceil($total / $per_page));
-$trang_hien = min($trang_hien, $total_page);
-$offset     = ($trang_hien - 1) * $per_page;
 
 $users = $pdo->prepare("
     SELECT kh.*,
@@ -57,10 +50,25 @@ $users = $pdo->prepare("
     FROM khach_hang kh
     WHERE $where_sql
     ORDER BY kh.ngay_tao DESC
-    LIMIT $per_page OFFSET $offset
 ");
 $users->execute($params);
 $users = $users->fetchAll();
+
+if ($filter_search !== '') {
+    $users = admin_fuzzy_filter_rows($users, $filter_search, static function (array $row): array {
+        return [
+            ['value' => $row['ho_ten'] ?? '', 'weight' => 1.0],
+            ['value' => $row['email'] ?? '', 'weight' => 0.92],
+            ['value' => $row['so_dien_thoai'] ?? '', 'weight' => 1.08],
+        ];
+    });
+}
+
+$pagination = admin_paginate_rows($users, $trang_hien, $per_page);
+$total = $pagination['total'];
+$total_page = $pagination['total_page'];
+$trang_hien = $pagination['page'];
+$users = $pagination['items'];
 
 $tong_kh      = $pdo->query("SELECT COUNT(*) FROM khach_hang")->fetchColumn();
 $tong_bi_khoa = $pdo->query("SELECT COUNT(*) FROM khach_hang WHERE bi_khoa = 1")->fetchColumn();

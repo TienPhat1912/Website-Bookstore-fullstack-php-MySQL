@@ -2,6 +2,7 @@
 ob_start();
 $page_title = 'Nhập hàng';
 require_once 'includes/admin_header.php';
+require_once __DIR__ . '/includes/admin_search_helper.php';
 
 
 // Tạo phiếu draft mới rồi redirect thẳng sang edit
@@ -20,16 +21,8 @@ $where  = ["1=1"];
 $params = [];
 if ($filter_tt === 'draft') { $where[] = "trang_thai = 'draft'"; }
 if ($filter_tt === 'done')  { $where[] = "trang_thai = 'done'"; }
-if ($filter_search !== '')  { $where[] = "ma_phieu LIKE ?"; $params[] = "%$filter_search%"; }
 
 $where_sql = implode(' AND ', $where);
-
-$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM phieu_nhap pn WHERE $where_sql");
-$count_stmt->execute($params);
-$total      = (int)$count_stmt->fetchColumn();
-$total_page = max(1, ceil($total / $per_page));
-$trang_hien = min($trang_hien, $total_page);
-$offset     = ($trang_hien - 1) * $per_page;
 
 $phieus = $pdo->prepare("
     SELECT pn.*,
@@ -38,10 +31,24 @@ $phieus = $pdo->prepare("
     FROM phieu_nhap pn
     WHERE $where_sql
     ORDER BY pn.ngay_tao DESC
-    LIMIT $per_page OFFSET $offset
 ");
 $phieus->execute($params);
 $phieus = $phieus->fetchAll();
+
+if ($filter_search !== '') {
+    $phieus = admin_fuzzy_filter_rows($phieus, $filter_search, static function (array $row): array {
+        return [
+            ['value' => $row['ma_phieu'] ?? '', 'weight' => 1.15],
+            ['value' => $row['ghi_chu'] ?? '', 'weight' => 0.55],
+        ];
+    });
+}
+
+$pagination = admin_paginate_rows($phieus, $trang_hien, $per_page);
+$total = $pagination['total'];
+$total_page = $pagination['total_page'];
+$trang_hien = $pagination['page'];
+$phieus = $pagination['items'];
 ?>
 
 <div class="page-header">

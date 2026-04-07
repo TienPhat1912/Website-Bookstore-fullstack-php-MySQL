@@ -2,6 +2,7 @@
 ob_start();
 $page_title = 'Quản lý sách';
 require_once 'includes/admin_header.php';
+require_once __DIR__ . '/includes/admin_search_helper.php';
 
 $the_loais = $pdo->query("SELECT * FROM the_loai WHERE trang_thai = 1 ORDER BY ten")->fetchAll();
 
@@ -14,18 +15,10 @@ $trang_hien    = max(1, (int)($_GET['trang'] ?? 1));
 $where  = ["1=1"];
 $params = [];
 if ($filter_tl > 0)        { $where[] = "s.the_loai_id = ?"; $params[] = $filter_tl; }
-if ($filter_search !== '') { $where[] = "(s.ten LIKE ? OR s.ma_sach LIKE ?)"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; }
 if ($filter_tt === 'hien')  { $where[] = "s.hien_trang = 1"; }
 if ($filter_tt === 'an')    { $where[] = "s.hien_trang = 0"; }
 
 $where_sql = implode(' AND ', $where);
-
-$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM sach s WHERE $where_sql");
-$count_stmt->execute($params);
-$total      = (int)$count_stmt->fetchColumn();
-$total_page = max(1, (int)ceil($total / $per_page));
-$trang_hien = min($trang_hien, $total_page);
-$offset     = ($trang_hien - 1) * $per_page;
 
 $sachs_stmt = $pdo->prepare("
     SELECT s.*, tl.ten AS ten_the_loai,
@@ -33,10 +26,26 @@ $sachs_stmt = $pdo->prepare("
     FROM sach s JOIN the_loai tl ON tl.id = s.the_loai_id
     WHERE $where_sql
     ORDER BY s.ngay_tao DESC
-    LIMIT $per_page OFFSET $offset
 ");
 $sachs_stmt->execute($params);
 $sachs = $sachs_stmt->fetchAll();
+
+if ($filter_search !== '') {
+    $sachs = admin_fuzzy_filter_rows($sachs, $filter_search, static function (array $row): array {
+        return [
+            ['value' => $row['ten'] ?? '', 'weight' => 1.0],
+            ['value' => $row['ma_sach'] ?? '', 'weight' => 1.15],
+            ['value' => $row['tac_gia'] ?? '', 'weight' => 0.65],
+            ['value' => $row['ten_the_loai'] ?? '', 'weight' => 0.5],
+        ];
+    });
+}
+
+$pagination = admin_paginate_rows($sachs, $trang_hien, $per_page);
+$total = $pagination['total'];
+$total_page = $pagination['total_page'];
+$trang_hien = $pagination['page'];
+$sachs = $pagination['items'];
 
 function page_url(int $p): string {
     $q = $_GET;

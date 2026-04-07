@@ -384,11 +384,31 @@ document.querySelector('form[action*="add_item"], form input[name="action"][valu
 document.getElementById('inp-ghichu').addEventListener('input', autoSave);
 
 // Tìm kiếm sách
-document.getElementById('sach-search').addEventListener('input', function() {
-  const q = this.value.toLowerCase();
-  document.querySelectorAll('#sach-select option').forEach(o => {
-    o.style.display = o.textContent.toLowerCase().includes(q) ? '' : 'none';
+const sachSearchInput = document.getElementById('sach-search');
+const sachSelect = document.getElementById('sach-select');
+const allSachOptions = Array.from(sachSelect.options);
+
+sachSearchInput.addEventListener('input', function() {
+  const q = this.value.trim();
+  const rankedOptions = !q
+    ? allSachOptions.slice()
+    : (window.adminSearch
+        ? window.adminSearch.rankItems(allSachOptions, q, function(option) {
+            return [{ value: option.textContent, weight: 1.0 }];
+          })
+        : allSachOptions.filter(function(option) {
+            return option.textContent.toLowerCase().includes(q.toLowerCase());
+          }));
+
+  sachSelect.innerHTML = '';
+  rankedOptions.forEach(function(option) {
+    option.style.display = '';
+    sachSelect.appendChild(option);
   });
+
+  if (sachSelect.options.length > 0 && sachSelect.selectedIndex < 0) {
+    sachSelect.selectedIndex = 0;
+  }
 });
 
 // === Format giá tiền ===

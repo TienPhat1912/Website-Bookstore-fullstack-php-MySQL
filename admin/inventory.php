@@ -2,6 +2,7 @@
 ob_start();
 $page_title = 'Tồn kho';
 require_once 'includes/admin_header.php';
+require_once __DIR__ . '/includes/admin_search_helper.php';
 
 // ---- MỨC CẢNH BÁO HẾT HÀNG ----
 if (isset($_POST['doi_muc_canh_bao'])) {
@@ -75,11 +76,6 @@ $gia_nhap_subquery = "
 
 $where  = ["s.hien_trang = 1"];
 $params = [];
-if ($filter_search !== '') {
-    $where[]  = "(s.ten LIKE :search1 OR s.ma_sach LIKE :search2)";
-    $params[':search1'] = "%$filter_search%";
-    $params[':search2'] = "%$filter_search%";
-}
 if ($filter_tl > 0) {
     $where[]           = "s.the_loai_id = :the_loai";
     $params[':the_loai'] = $filter_tl;
@@ -94,21 +90,6 @@ if ($filter_tt === 'con')     $having = "HAVING ton_kho > $muc_canh_bao";
 
 $where_sql = implode(' AND ', $where);
 
-// Đếm tổng (dùng subquery)
-$count_sql = "
-    SELECT COUNT(*) FROM (
-        SELECT s.id, $ton_subquery AS ton_kho
-        FROM sach s JOIN the_loai tl ON tl.id = s.the_loai_id
-        WHERE $where_sql $having
-    ) t
-";
-$count_stmt = $pdo->prepare($count_sql);
-$count_stmt->execute($params);
-$total      = (int)$count_stmt->fetchColumn();
-$total_page = max(1, ceil($total / $per_page));
-$trang_hien = min($trang_hien, $total_page);
-$offset     = ($trang_hien - 1) * $per_page;
-
 switch($filter_sort) {
     case 'ton_desc':      $order = 'ton_kho DESC'; break;
     case 'gia_nhap_asc':  $order = 's.gia_nhap ASC'; break;
@@ -121,7 +102,7 @@ switch($filter_sort) {
 }
 
 $sql = "
-    SELECT s.id, s.ma_sach, s.ten, $gia_nhap_subquery AS gia_nhap, s.ty_le_ln, s.da_nhap_hang, s.don_vi_tinh,
+    SELECT s.id, s.ma_sach, s.ten, s.tac_gia, $gia_nhap_subquery AS gia_nhap, s.ty_le_ln, s.da_nhap_hang, s.don_vi_tinh,
            tl.ten AS ten_the_loai,
            ROUND($gia_nhap_subquery * (1 + s.ty_le_ln / 100), 0) AS gia_ban,
            $ton_subquery AS ton_kho
@@ -129,14 +110,28 @@ $sql = "
     WHERE $where_sql
     $having
     ORDER BY $order, s.ten ASC
-    LIMIT :limit OFFSET :offset
 ";
 $stmt = $pdo->prepare($sql);
 foreach ($params as $k => $v) $stmt->bindValue($k, $v);
-$stmt->bindValue(':limit',  $per_page, PDO::PARAM_INT);
-$stmt->bindValue(':offset', $offset,   PDO::PARAM_INT);
 $stmt->execute();
 $sachs = $stmt->fetchAll();
+
+if ($filter_search !== '') {
+    $sachs = admin_fuzzy_filter_rows($sachs, $filter_search, static function (array $row): array {
+        return [
+            ['value' => $row['ten'] ?? '', 'weight' => 1.0],
+            ['value' => $row['ma_sach'] ?? '', 'weight' => 1.15],
+            ['value' => $row['tac_gia'] ?? '', 'weight' => 0.65],
+            ['value' => $row['ten_the_loai'] ?? '', 'weight' => 0.45],
+        ];
+    });
+}
+
+$pagination = admin_paginate_rows($sachs, $trang_hien, $per_page);
+$total = $pagination['total'];
+$total_page = $pagination['total_page'];
+$trang_hien = $pagination['page'];
+$sachs = $pagination['items'];
 
 function inv_url(array $override = []): string {
     $q = array_merge($_GET, $override);
@@ -292,11 +287,20 @@ function togglePanel(id) {
 
           input.addEventListener('input', function() {
             hidden.value = '';
-            var q = this.value.trim().toLowerCase();
+            var q = this.value.trim();
             if (!q) { dropdown.style.display = 'none'; return; }
-            renderList(_sachData.filter(function(s) {
-              return s.ten.toLowerCase().indexOf(q) >= 0 || s.ma.toLowerCase().indexOf(q) >= 0;
-            }));
+            var ranked = window.adminSearch
+              ? window.adminSearch.rankItems(_sachData, q, function(s) {
+                  return [
+                    { value: s.ten, weight: 1.0 },
+                    { value: s.ma, weight: 1.15 }
+                  ];
+                })
+              : _sachData.filter(function(s) {
+                  var qLower = q.toLowerCase();
+                  return s.ten.toLowerCase().indexOf(qLower) >= 0 || s.ma.toLowerCase().indexOf(qLower) >= 0;
+                });
+            renderList(ranked);
           });
 
           input.addEventListener('focus', function() {

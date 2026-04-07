@@ -53,6 +53,7 @@ if (isset($_GET['action']) && isset($_GET['id']) && !empty($_SERVER['HTTP_X_REQU
 ob_start();
 $page_title = 'Đơn hàng';
 require_once 'includes/admin_header.php';
+require_once __DIR__ . '/includes/admin_search_helper.php';
 
 
 
@@ -407,19 +408,10 @@ $params = [];
 if ($filter_tt !== 'tat_ca')    { $where[] = "dh.trang_thai = ?"; $params[] = $filter_tt; }
 if ($filter_tu !== '')           { $where[] = "DATE(dh.ngay_dat) >= ?"; $params[] = $filter_tu; }
 if ($filter_den !== '')          { $where[] = "DATE(dh.ngay_dat) <= ?"; $params[] = $filter_den; }
-if ($filter_phuong !== '')       { $where[] = "dh.phuong_xa LIKE ?"; $params[] = "%$filter_phuong%"; }
-if ($filter_search !== '')       { $where[] = "(dh.ma_don LIKE ? OR kh.ho_ten LIKE ?)"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; }
 
 $sort = in_array($_GET['sort'] ?? '', ['phuong']) ? 'dh.phuong_xa ASC' : 'dh.ngay_dat DESC';
 
 $where_sql = implode(' AND ', $where);
-
-$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM don_hang dh JOIN khach_hang kh ON kh.id = dh.khach_hang_id WHERE $where_sql");
-$count_stmt->execute($params);
-$total      = (int)$count_stmt->fetchColumn();
-$total_page = max(1, ceil($total / $per_page));
-$trang_hien = min($trang_hien, $total_page);
-$offset     = ($trang_hien - 1) * $per_page;
 
 $don_hangs = $pdo->prepare("
     SELECT dh.id, dh.ma_don, dh.ngay_dat, dh.tong_tien, dh.trang_thai,
@@ -429,10 +421,33 @@ $don_hangs = $pdo->prepare("
     JOIN khach_hang kh ON kh.id = dh.khach_hang_id
     WHERE $where_sql
     ORDER BY $sort
-    LIMIT $per_page OFFSET $offset
 ");
 $don_hangs->execute($params);
 $don_hangs = $don_hangs->fetchAll();
+
+if ($filter_search !== '') {
+    $don_hangs = admin_fuzzy_filter_rows($don_hangs, $filter_search, static function (array $row): array {
+        return [
+            ['value' => $row['ma_don'] ?? '', 'weight' => 1.15],
+            ['value' => $row['ho_ten'] ?? '', 'weight' => 1.0],
+            ['value' => $row['email'] ?? '', 'weight' => 0.85],
+        ];
+    });
+}
+
+if ($filter_phuong !== '') {
+    $don_hangs = admin_fuzzy_filter_rows($don_hangs, $filter_phuong, static function (array $row): array {
+        return [
+            ['value' => $row['dia_chi_giao'] ?? '', 'weight' => 1.0],
+        ];
+    }, ['min_score' => 120]);
+}
+
+$pagination = admin_paginate_rows($don_hangs, $trang_hien, $per_page);
+$total = $pagination['total'];
+$total_page = $pagination['total_page'];
+$trang_hien = $pagination['page'];
+$don_hangs = $pagination['items'];
 
 // Thống kê nhanh
 $stats = $pdo->query("

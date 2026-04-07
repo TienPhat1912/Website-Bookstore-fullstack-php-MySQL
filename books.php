@@ -1,19 +1,46 @@
 <?php
 $page_title = 'Danh sách sách';
 require_once 'includes/header.php';
+require_once 'includes/search_helper.php';
 
 $search      = trim($_GET['search']    ?? '');
 $the_loai_id = (int)($_GET['the_loai'] ?? 0);
 $gia_tu      = (int)($_GET['gia_tu']   ?? 0);
 $gia_den     = (int)($_GET['gia_den']  ?? 0);
-$sap_xep     = $_GET['sap_xep']        ?? 'moi_nhat';
+$sap_xep     = $_GET['sap_xep']        ?? ($search !== '' ? 'phu_hop' : 'moi_nhat');
 $trang_hien  = max(1, (int)($_GET['trang'] ?? 1));
 $moi_trang   = 12;
+
+if ($search === '' && $sap_xep === 'phu_hop') {
+    $sap_xep = 'moi_nhat';
+}
+
+$search_norm = normalize_search_text($search);
+$use_fuzzy_search = $search !== '' && strlen(str_replace(' ', '', $search_norm)) >= 2;
+
+if (!$use_fuzzy_search && $sap_xep === 'phu_hop') {
+    $sap_xep = 'moi_nhat';
+}
+
+function sort_book_rows(array &$rows, string $sort): void {
+    if ($sort === 'phu_hop') {
+        return;
+    }
+
+    usort($rows, static function (array $a, array $b) use ($sort): int {
+        return match ($sort) {
+            'gia_tang' => ((int) $a['gia_ban'] <=> (int) $b['gia_ban']) ?: strcmp($a['ten'], $b['ten']),
+            'gia_giam' => ((int) $b['gia_ban'] <=> (int) $a['gia_ban']) ?: strcmp($a['ten'], $b['ten']),
+            'ten_az'   => strcmp(normalize_search_text($a['ten']), normalize_search_text($b['ten'])) ?: (($a['id'] ?? 0) <=> ($b['id'] ?? 0)),
+            default    => strcmp((string) ($b['ngay_tao'] ?? ''), (string) ($a['ngay_tao'] ?? '')) ?: (($b['id'] ?? 0) <=> ($a['id'] ?? 0)),
+        };
+    });
+}
 
 $where  = ["s.hien_trang = 1", "s.so_luong > 0"];
 $params = [];
 
-if ($search !== '') {
+if ($search !== '' && !$use_fuzzy_search) {
     $where[]  = "(s.ten LIKE ? OR s.tac_gia LIKE ?)";
     $params[] = "%$search%";
     $params[] = "%$search%";
@@ -32,32 +59,47 @@ if ($gia_den > 0) {
 }
 
 $where_sql = "WHERE " . implode(" AND ", $where);
-
-$order_sql = match($sap_xep) {
-    'gia_tang' => "ORDER BY gia_ban ASC",
-    'gia_giam' => "ORDER BY gia_ban DESC",
-    'ten_az'   => "ORDER BY s.ten ASC",
-    default    => "ORDER BY s.ngay_tao DESC",
-};
-
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM sach s $where_sql");
-$stmt->execute($params);
-$tong_sp    = $stmt->fetchColumn();
-$tong_trang = max(1, ceil($tong_sp / $moi_trang));
-$trang_hien = min($trang_hien, $tong_trang);
-$offset     = ($trang_hien - 1) * $moi_trang;
-
-$sql = "
+$base_sql = "
     SELECT s.*, tl.ten AS ten_the_loai,
            ROUND(s.gia_nhap * (1 + s.ty_le_ln/100), 0) AS gia_ban
     FROM sach s
     JOIN the_loai tl ON s.the_loai_id = tl.id
-    $where_sql $order_sql
-    LIMIT $moi_trang OFFSET $offset
+    $where_sql
 ";
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$sachs = $stmt->fetchAll();
+
+if ($use_fuzzy_search) {
+    $stmt = $pdo->prepare($base_sql);
+    $stmt->execute($params);
+    $sachs = rank_book_search_rows($stmt->fetchAll(), $search);
+
+    if ($sap_xep !== 'phu_hop') {
+        sort_book_rows($sachs, $sap_xep);
+    }
+
+    $pagination = paginate_rows($sachs, $trang_hien, $moi_trang);
+    $tong_sp = $pagination['total'];
+    $tong_trang = $pagination['total_page'];
+    $trang_hien = $pagination['page'];
+    $sachs = $pagination['items'];
+} else {
+    $order_sql = match($sap_xep) {
+        'gia_tang' => "ORDER BY gia_ban ASC",
+        'gia_giam' => "ORDER BY gia_ban DESC",
+        'ten_az'   => "ORDER BY s.ten ASC",
+        default    => "ORDER BY s.ngay_tao DESC",
+    };
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM sach s $where_sql");
+    $stmt->execute($params);
+    $tong_sp    = $stmt->fetchColumn();
+    $tong_trang = max(1, ceil($tong_sp / $moi_trang));
+    $trang_hien = min($trang_hien, $tong_trang);
+    $offset     = ($trang_hien - 1) * $moi_trang;
+
+    $stmt = $pdo->prepare($base_sql . " $order_sql LIMIT $moi_trang OFFSET $offset");
+    $stmt->execute($params);
+    $sachs = $stmt->fetchAll();
+}
 
 $the_loais = $pdo->query("SELECT * FROM the_loai WHERE trang_thai = 1")->fetchAll();
 
@@ -184,6 +226,9 @@ function buildUrl(array $override = []): string {
           <label class="text-muted" style="font-size:.84rem;">Sắp xếp:</label>
           <select class="form-select form-select-sm" style="width:160px; border-radius:8px;"
                   onchange="window.location='<?= buildUrl() ?>&sap_xep='+this.value">
+            <?php if ($search !== ''): ?>
+              <option value="phu_hop" <?= $sap_xep=='phu_hop'?'selected':'' ?>>Phù hợp nhất</option>
+            <?php endif; ?>
             <option value="moi_nhat" <?= $sap_xep=='moi_nhat'?'selected':'' ?>>Mới nhất</option>
             <option value="gia_tang" <?= $sap_xep=='gia_tang'?'selected':'' ?>>Giá tăng dần</option>
             <option value="gia_giam" <?= $sap_xep=='gia_giam'?'selected':'' ?>>Giá giảm dần</option>

@@ -2,6 +2,7 @@
 ob_start();
 $page_title = 'Quản lý giá';
 require_once 'includes/admin_header.php';
+require_once __DIR__ . '/includes/admin_search_helper.php';
 
 // ---- CẬP NHẬT TỶ LỆ LỢI NHUẬN ----
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_ty_le') {
@@ -47,18 +48,10 @@ $trang_hien    = max(1, (int)($_GET['trang'] ?? 1));
 $where  = ["1=1"];
 $params = [];
 if ($filter_tl > 0)        { $where[] = "s.the_loai_id = ?"; $params[] = $filter_tl; }
-if ($filter_search !== '')  { $where[] = "(s.ten LIKE ? OR s.ma_sach LIKE ?)"; $params[] = "%$filter_search%"; $params[] = "%$filter_search%"; }
 if ($filter_nhap === 'co')  { $where[] = "s.da_nhap_hang = 1"; }
 if ($filter_nhap === 'chua'){ $where[] = "s.da_nhap_hang = 0"; }
 
 $where_sql = implode(' AND ', $where);
-
-$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM sach s JOIN the_loai tl ON tl.id = s.the_loai_id WHERE $where_sql");
-$count_stmt->execute($params);
-$total      = (int)$count_stmt->fetchColumn();
-$total_page = max(1, ceil($total / $per_page));
-$trang_hien = min($trang_hien, $total_page);
-$offset     = ($trang_hien - 1) * $per_page;
 
 $sachs = $pdo->prepare("
     SELECT s.id, s.ma_sach, s.ten, s.gia_nhap, s.ty_le_ln, s.so_luong, s.da_nhap_hang,
@@ -69,10 +62,25 @@ $sachs = $pdo->prepare("
     JOIN the_loai tl ON tl.id = s.the_loai_id
     WHERE $where_sql
     ORDER BY s.ten ASC
-    LIMIT $per_page OFFSET $offset
 ");
 $sachs->execute($params);
 $sachs = $sachs->fetchAll();
+
+if ($filter_search !== '') {
+    $sachs = admin_fuzzy_filter_rows($sachs, $filter_search, static function (array $row): array {
+        return [
+            ['value' => $row['ten'] ?? '', 'weight' => 1.0],
+            ['value' => $row['ma_sach'] ?? '', 'weight' => 1.15],
+            ['value' => $row['ten_the_loai'] ?? '', 'weight' => 0.45],
+        ];
+    });
+}
+
+$pagination = admin_paginate_rows($sachs, $trang_hien, $per_page);
+$total = $pagination['total'];
+$total_page = $pagination['total_page'];
+$trang_hien = $pagination['page'];
+$sachs = $pagination['items'];
 
 // Lịch sử nhập hàng theo sách (tra cứu)
 $lich_su_sach_id = (int)($_GET['lich_su'] ?? 0);
