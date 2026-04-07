@@ -128,7 +128,7 @@ define('DB_PASS', '');   // XAMPP mặc định không có mật khẩu
 |          |                     |
 | -------- | ------------------- |
 | Email    | `admin@nhasach.com` |
-| Mật khẩu | `matkhau`           |
+| Mật khẩu | `password`          |
 
 ### Khách hàng demo
 
