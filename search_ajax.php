@@ -15,7 +15,8 @@ $stmt = $pdo->query("
     SELECT s.id, s.ten, s.tac_gia, s.hinh,
            ROUND(s.gia_nhap * (1 + s.ty_le_ln / 100), 0) AS gia_ban
     FROM sach s
-    WHERE s.hien_trang = 1
+    JOIN the_loai tl ON tl.id = s.the_loai_id
+    WHERE s.hien_trang = 1 AND tl.trang_thai = 1
 ");
 $rows = $stmt->fetchAll();
 

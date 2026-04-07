@@ -10,6 +10,18 @@ $gia_den     = (int)($_GET['gia_den']  ?? 0);
 $sap_xep     = $_GET['sap_xep']        ?? ($search !== '' ? 'phu_hop' : 'moi_nhat');
 $trang_hien  = max(1, (int)($_GET['trang'] ?? 1));
 $moi_trang   = 12;
+$the_loais   = $pdo->query("SELECT * FROM the_loai WHERE trang_thai = 1 ORDER BY ten")->fetchAll();
+$the_loai_map = [];
+
+foreach ($the_loais as $tl) {
+    $the_loai_map[(int) $tl['id']] = $tl;
+}
+
+if ($the_loai_id > 0 && !isset($the_loai_map[$the_loai_id])) {
+    $the_loai_id = 0;
+}
+
+$selected_the_loai = $the_loai_map[$the_loai_id] ?? null;
 
 if ($search === '' && $sap_xep === 'phu_hop') {
     $sap_xep = 'moi_nhat';
@@ -37,7 +49,7 @@ function sort_book_rows(array &$rows, string $sort): void {
     });
 }
 
-$where  = ["s.hien_trang = 1", "s.so_luong > 0"];
+$where  = ["s.hien_trang = 1", "s.so_luong > 0", "tl.trang_thai = 1"];
 $params = [];
 
 if ($search !== '' && !$use_fuzzy_search) {
@@ -59,11 +71,14 @@ if ($gia_den > 0) {
 }
 
 $where_sql = "WHERE " . implode(" AND ", $where);
+$from_sql = "
+    FROM sach s
+    JOIN the_loai tl ON s.the_loai_id = tl.id
+";
 $base_sql = "
     SELECT s.*, tl.ten AS ten_the_loai,
            ROUND(s.gia_nhap * (1 + s.ty_le_ln/100), 0) AS gia_ban
-    FROM sach s
-    JOIN the_loai tl ON s.the_loai_id = tl.id
+    $from_sql
     $where_sql
 ";
 
@@ -89,7 +104,7 @@ if ($use_fuzzy_search) {
         default    => "ORDER BY s.ngay_tao DESC",
     };
 
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM sach s $where_sql");
+    $stmt = $pdo->prepare("SELECT COUNT(*) $from_sql $where_sql");
     $stmt->execute($params);
     $tong_sp    = $stmt->fetchColumn();
     $tong_trang = max(1, ceil($tong_sp / $moi_trang));
@@ -101,14 +116,29 @@ if ($use_fuzzy_search) {
     $sachs = $stmt->fetchAll();
 }
 
-$the_loais = $pdo->query("SELECT * FROM the_loai WHERE trang_thai = 1")->fetchAll();
-
 $gia_max_db = 5000000;
+$current_filters = [
+    'search' => $search,
+    'the_loai' => $the_loai_id,
+    'gia_tu' => $gia_tu,
+    'gia_den' => $gia_den,
+    'sap_xep' => $sap_xep,
+];
+
 function buildUrl(array $override = []): string {
-    $p = array_merge($_GET, $override);
-    unset($p['trang']);
-    if (isset($override['trang'])) $p['trang'] = $override['trang'];
-    return '/nhasach/books.php?' . http_build_query(array_filter($p, fn($v) => $v !== '' && $v !== '0' && $v !== 0));
+    global $current_filters;
+
+    $params = array_merge($current_filters, $override);
+    unset($params['trang']);
+
+    if (array_key_exists('trang', $override)) {
+        $params['trang'] = $override['trang'];
+    }
+
+    $params = array_filter($params, static fn($value) => $value !== '' && $value !== '0' && $value !== 0);
+    $query = http_build_query($params);
+
+    return '/nhasach/books.php' . ($query !== '' ? '?' . $query : '');
 }
 ?>
 
@@ -214,8 +244,8 @@ function buildUrl(array $override = []): string {
           <h5 class="fw-bold mb-0" style="color:#1a1a2e;">
             <?php if ($search !== ''): ?>
               Kết quả: "<span style="color:#f4a261;"><?= htmlspecialchars($search) ?></span>"
-            <?php elseif ($the_loai_id > 0): ?>
-              <?php foreach ($the_loais as $tl) { if ($tl['id'] == $the_loai_id) echo htmlspecialchars($tl['ten']); } ?>
+            <?php elseif ($selected_the_loai): ?>
+              <?= htmlspecialchars($selected_the_loai['ten']) ?>
             <?php else: ?>
               Tất cả sách
             <?php endif; ?>
@@ -225,7 +255,7 @@ function buildUrl(array $override = []): string {
         <div class="d-flex align-items-center gap-2">
           <label class="text-muted" style="font-size:.84rem;">Sắp xếp:</label>
           <select class="form-select form-select-sm" style="width:160px; border-radius:8px;"
-                  onchange="window.location='<?= buildUrl() ?>&sap_xep='+this.value">
+                  onchange="window.location='<?= buildUrl(['sap_xep' => '__SORT__']) ?>'.replace('__SORT__', encodeURIComponent(this.value))">
             <?php if ($search !== ''): ?>
               <option value="phu_hop" <?= $sap_xep=='phu_hop'?'selected':'' ?>>Phù hợp nhất</option>
             <?php endif; ?>

@@ -12,7 +12,7 @@ $stmt = $pdo->query("
            ROUND(s.gia_nhap * (1 + s.ty_le_ln/100), 0) AS gia_ban
     FROM sach s
     JOIN the_loai tl ON s.the_loai_id = tl.id
-    WHERE s.hien_trang = 1 AND s.so_luong > 0
+    WHERE s.hien_trang = 1 AND s.so_luong > 0 AND tl.trang_thai = 1
     ORDER BY s.ngay_tao DESC
     LIMIT 8
 ");
