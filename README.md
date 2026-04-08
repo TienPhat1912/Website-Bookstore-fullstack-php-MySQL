@@ -198,47 +198,64 @@ rm /path/to/htdocs/nhasach/load.php
 
 ## 📁 Cấu trúc thư mục
 
-```
+```text
 nhasach/
-├── Database/
-│   └── nhasach.sql            # File SQL — import vào phpMyAdmin
-├── config/
-│   └── database.php           # Cấu hình kết nối CSDL
-├── includes/
-│   ├── header.php             # Header chung (navbar, session)
-│   ├── footer.php             # Footer chung
-│   ├── card_sach.php          # Component card sách
-│   └── diachi_dropdown.php    # Dropdown tỉnh/quận/phường
-├── admin/
-│   ├── includes/
-│   │   ├── admin_header.php   # Sidebar & auth admin
-│   │   └── admin_footer.php
-│   ├── index.php              # Dashboard
-│   ├── products.php           # Quản lý sách
-│   ├── categories.php         # Quản lý thể loại
-│   ├── import.php             # Nhập hàng (phiếu nhập)
-│   ├── prices.php             # Quản lý giá bán
-│   ├── orders.php             # Quản lý đơn hàng
-│   ├── inventory.php          # Tồn kho & Báo cáo
-│   ├── users.php              # Quản lý người dùng
-│   ├── login.php
-│   └── logout.php
-├── assets/
-│   ├── css/style.css          # CSS toàn site
-│   └── js/diachi.json         # Dữ liệu tỉnh/quận/phường
-├── uploads/                   # Ảnh bìa sách (tự tạo khi upload, không push lên git)
-│   └── .keep                  # File giữ chỗ để git track thư mục trống
-├── .gitignore                 # Bỏ qua uploads/, .DS_Store, .vscode/
-├── index.php                  # Trang chủ
-├── books.php                  # Danh sách & tìm kiếm sách
-├── book.php                   # Chi tiết sách
-├── cart.php                   # Giỏ hàng
-├── checkout.php               # Đặt hàng & thanh toán
-├── order_success.php          # Xác nhận đặt hàng thành công
-├── orders.php                 # Lịch sử đơn hàng
-├── register.php               # Đăng ký tài khoản
-├── login.php                  # Đăng nhập
-└── logout.php
+|-- admin/
+|   |-- includes/
+|   |   |-- admin_footer.php        # Footer admin
+|   |   |-- admin_header.php        # Header/sidebar + auth admin
+|   |   `-- admin_search_helper.php # Helper tìm kiếm/phân trang cho admin
+|   |-- categories.php              # Quản lý thể loại
+|   |-- import.php                  # Danh sách phiếu nhập
+|   |-- import_edit.php             # Sửa/hoàn thành phiếu nhập
+|   |-- index.php                   # Dashboard admin
+|   |-- inventory.php               # Tồn kho tổng hợp
+|   |-- inventory_detail.php        # Chi tiết nhập/xuất
+|   |-- inventory_report.php        # Báo cáo tồn kho
+|   |-- login.php                   # Đăng nhập admin
+|   |-- logout.php                  # Đăng xuất admin
+|   |-- orders.php                  # Quản lý đơn hàng
+|   |-- prices.php                  # Quản lý giá bán
+|   |-- product_add.php             # Thêm sách
+|   |-- product_edit.php            # Sửa/xóa/ẩn sách
+|   |-- products.php                # Danh sách sách
+|   |-- user_add.php                # Thêm tài khoản khách hàng
+|   `-- users.php                   # Quản lý người dùng
+|-- assets/
+|   |-- css/
+|   |   `-- style.css               # CSS toàn site
+|   |-- img/
+|   |   `-- .keep                   # Giữ thư mục ảnh trong git
+|   `-- js/
+|       |-- admin-search.js         # Script tìm kiếm admin
+|       `-- diachi.json             # Dữ liệu địa chỉ
+|-- config/
+|   `-- database.php                # Cấu hình kết nối CSDL
+|-- Database/
+|   `-- nhasach.sql                 # File SQL để import
+|-- includes/
+|   |-- card_sach.php               # Component card sách
+|   |-- diachi_dropdown.php         # Khối nhập địa chỉ dùng lại
+|   |-- footer.php                  # Footer chung
+|   |-- header.php                  # Header chung
+|   `-- search_helper.php           # Helper tìm kiếm phía khách
+|-- uploads/                        # Ảnh bìa sách được upload khi chạy
+|-- .gitignore
+|-- book.php                        # Chi tiết sách
+|-- books.php                       # Danh sách sách + lọc/tìm kiếm
+|-- cart.php                        # Giỏ hàng
+|-- cart_ajax.php                   # Xử lý giỏ hàng bằng AJAX
+|-- checkout.php                    # Đặt hàng
+|-- index.php                       # Trang chủ
+|-- load.php                        # Seed/nạp dữ liệu sách mẫu
+|-- login.php                       # Đăng nhập khách hàng
+|-- logout.php                      # Đăng xuất khách hàng
+|-- order_success.php               # Thông báo đặt hàng thành công
+|-- orders.php                      # Lịch sử đơn hàng
+|-- profile.php                     # Hồ sơ khách hàng
+|-- README.md
+|-- register.php                    # Đăng ký tài khoản
+|-- search_ajax.php                 # Tìm kiếm gợi ý bằng AJAX
 ```
 
 ---
