@@ -85,8 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         $stmt = $pdo->prepare("
-            INSERT INTO sach (ma_sach, ten, tac_gia, the_loai_id, nha_xb, mo_ta, don_vi_tinh, hinh, ty_le_ln)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO sach (ma_sach, ten, tac_gia, the_loai_id, nha_xb, mo_ta, don_vi_tinh, hinh, ty_le_ln, hien_trang)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
         ");
         $stmt->execute([$ma_sach, $ten, $tac_gia, $the_loai_id, $nha_xb, $mo_ta, $don_vi, $hinh, $ty_le_ln]);
         $_SESSION['flash'] = ['type' => 'success', 'msg' => "Them sach <strong>" . htmlspecialchars($ten) . "</strong> thanh cong! Ma sach: <strong>$ma_sach</strong>"];

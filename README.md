@@ -240,7 +240,6 @@ nhasach/
 |   |-- header.php                  # Header chung
 |   `-- search_helper.php           # Helper tìm kiếm phía khách
 |-- uploads/                        # Ảnh bìa sách được upload khi chạy
-|-- .gitignore
 |-- book.php                        # Chi tiết sách
 |-- books.php                       # Danh sách sách + lọc/tìm kiếm
 |-- cart.php                        # Giỏ hàng

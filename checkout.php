@@ -240,46 +240,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label fw-semibold" style="font-size:.85rem;">
-              Số nhà, tên đường <span class="text-danger">*</span>
-            </label>
-            <input type="text" name="dia_chi"
-                   class="form-control <?= isset($errors['dia_chi']) ? 'is-invalid' : '' ?>"
-                   placeholder="123 Đường Nguyễn Văn Cừ"
-                   value="<?= htmlspecialchars($_POST['dia_chi'] ?? '') ?>">
-            <?php if (isset($errors['dia_chi'])): ?>
-              <div class="invalid-feedback"><?= $errors['dia_chi'] ?></div>
-            <?php endif; ?>
-          </div>
-
-          <div class="row g-2 mb-3">
-            <div class="col-12">
-              <label class="form-label fw-semibold" style="font-size:.85rem;">
-                Phường/Xã <span class="text-danger">*</span>
-              </label>
-              <input type="text" name="phuong_xa"
-                     class="form-control <?= isset($errors['phuong']) ? 'is-invalid' : '' ?>"
-                     placeholder="Phường 5"
-                     value="<?= htmlspecialchars($_POST['phuong_xa'] ?? '') ?>">
-              <?php if (isset($errors['phuong'])): ?>
-                <div class="invalid-feedback"><?= $errors['phuong'] ?></div>
-              <?php endif; ?>
-            </div>
-          </div>
-
-          <div class="mb-2">
-            <label class="form-label fw-semibold" style="font-size:.85rem;">
-              Tỉnh/Thành phố <span class="text-danger">*</span>
-            </label>
-            <input type="text" name="tinh_tp"
-                   class="form-control <?= isset($errors['tinh']) ? 'is-invalid' : '' ?>"
-                   placeholder="TP. Hồ Chí Minh"
-                   value="<?= htmlspecialchars($_POST['tinh_tp'] ?? '') ?>">
-            <?php if (isset($errors['tinh'])): ?>
-              <div class="invalid-feedback"><?= $errors['tinh'] ?></div>
-            <?php endif; ?>
-          </div>
+          <?php
+          $dc_prefix = 'checkout';
+          $dc_tinh   = $_POST['tinh_tp']   ?? '';
+          $dc_phuong = $_POST['phuong_xa'] ?? '';
+          $dc_diachi = $_POST['dia_chi']   ?? '';
+          include 'includes/diachi_dropdown.php';
+          ?>
         </div>
       </div>
 
