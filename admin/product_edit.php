@@ -25,7 +25,20 @@ $old    = [];
 // ---- XOÁ / ẨN ----
 $action = $_REQUEST['action'] ?? '';
 
+if ($action === 'hide') {
+    $pdo->prepare("UPDATE sach SET hien_trang = 0 WHERE id = ?")->execute([$id]);
+    $_SESSION['flash'] = ['type' => 'warning', 'msg' => 'Sách đã được ẩn khỏi cửa hàng.'];
+    header("Location: /nhasach/admin/product_edit.php?id=$id");
+    exit;
+}
+
 if ($action === 'delete') {
+    if ($edit_sach['da_nhap_hang']) {
+        $_SESSION['flash'] = ['type' => 'warning', 'msg' => 'Không thể xoá hẳn sách đã nhập hàng. Hãy ẩn sách thay vì xoá.'];
+        header("Location: /nhasach/admin/product_edit.php?id=$id");
+        exit;
+    }
+
     if ($edit_sach['da_nhap_hang']) {
         $pdo->prepare("UPDATE sach SET hien_trang = 0 WHERE id = ?")->execute([$id]);
         $_SESSION['flash'] = ['type' => 'warning', 'msg' => 'Sách đã được ẩn khỏi cửa hàng (đã từng nhập hàng).'];
@@ -220,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update') {
 
         <span class="ms-auto d-flex gap-1 flex-wrap">
           <?php if ($edit_sach['hien_trang']): ?>
-            <a href="/nhasach/admin/product_edit.php?id=<?= $id ?>&action=delete"
+            <a href="/nhasach/admin/product_edit.php?id=<?= $id ?>&action=hide"
                class="btn btn-sm btn-outline-warning" style="border-radius:8px;"
                onclick="return confirm('Ẩn sách này khỏi cửa hàng?')">
               <i class="bi bi-eye-slash me-1"></i>Ẩn sách
