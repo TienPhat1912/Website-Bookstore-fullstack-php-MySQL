@@ -71,7 +71,7 @@ $sql_xuat = "
     FROM chi_tiet_don_hang ct
     JOIN don_hang dh ON dh.id = ct.don_hang_id
     JOIN khach_hang kh ON kh.id = dh.khach_hang_id
-    WHERE ct.sach_id = ? AND dh.trang_thai != 'da_huy'
+    WHERE ct.sach_id = ? AND dh.trang_thai = 'da_giao'
 ";
 $params_xuat = [$id];
 if ($co_loc_ngay) {
