@@ -50,9 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ma_sach = trim($_POST['ma_sach'] ?? '');
 
     // Validate
-    if (empty($ten))       $errors['ten']         = 'Vui long nhap ten sach.';
-    if ($the_loai_id <= 0) $errors['the_loai_id'] = 'Vui long chon the loai.';
-    if ($ty_le_ln < 0)     $errors['ty_le_ln']    = 'Ty le loi nhuan khong hop le.';
+    if (empty($ten))       $errors['ten']         = 'Vui lòng nhập tên sách.';
+    if ($the_loai_id <= 0) $errors['the_loai_id'] = 'Vui lòng chọn thể loại.';
+    if ($ty_le_ln < 0)     $errors['ty_le_ln']    = 'Tỷ lệ lợi nhuận không hợp lệ.';
 
     // Kiểm tra mã sách không bị trùng (phòng race condition)
     if (!empty($ma_sach)) {
@@ -70,9 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ext     = strtolower(pathinfo($_FILES['hinh']['name'], PATHINFO_EXTENSION));
         $allowed = ['jpg','jpeg','png','webp'];
         if (!in_array($ext, $allowed)) {
-            $errors['hinh'] = 'Chi chap nhan file jpg, jpeg, png, webp.';
+            $errors['hinh'] = 'Chỉ chấp nhận file jpg, jpeg, png, webp.';
         } elseif ($_FILES['hinh']['size'] > 2 * 1024 * 1024) {
-            $errors['hinh'] = 'Anh toi da 2MB.';
+            $errors['hinh'] = 'Ảnh tối đa 2MB.';
         } else {
             $ten_file   = 'sach_' . time() . '_' . rand(100,999) . '.' . $ext;
             $upload_dir = '../uploads/';
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
         ");
         $stmt->execute([$ma_sach, $ten, $tac_gia, $the_loai_id, $nha_xb, $mo_ta, $don_vi, $hinh, $ty_le_ln]);
-        $_SESSION['flash'] = ['type' => 'success', 'msg' => "Them sach <strong>" . htmlspecialchars($ten) . "</strong> thanh cong! Ma sach: <strong>$ma_sach</strong>"];
+        $_SESSION['flash'] = ['type' => 'success', 'msg' => "Thêm sách " . htmlspecialchars($ten) . " thành công! Mã sách: $ma_sach"];
         header('Location: /nhasach/admin/products.php');
         exit;
     }
