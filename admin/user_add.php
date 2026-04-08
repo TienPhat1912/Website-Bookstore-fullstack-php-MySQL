@@ -84,24 +84,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                placeholder="0901234567">
         <?php if (isset($errors['so_dien_thoai'])): ?><div class="invalid-feedback"><?= $errors['so_dien_thoai'] ?></div><?php endif; ?>
       </div>
-      <div class="col-md-12">
-        <label class="form-label fw-semibold" style="font-size:.85rem;">Địa chỉ</label>
-        <input type="text" name="dia_chi" class="form-control"
-               value="<?= htmlspecialchars($old['dia_chi'] ?? '') ?>"
-               placeholder="Số nhà, đường...">
-      </div>
-      <div class="col-md-6">
-        <label class="form-label fw-semibold" style="font-size:.85rem;">Phường / Xã</label>
-        <input type="text" name="phuong_xa" class="form-control"
-               value="<?= htmlspecialchars($old['phuong_xa'] ?? '') ?>"
-               placeholder="Phường/Xã">
-      </div>
-      <div class="col-md-6">
-        <label class="form-label fw-semibold" style="font-size:.85rem;">Tỉnh / Thành phố</label>
-        <input type="text" name="tinh_tp" class="form-control"
-               value="<?= htmlspecialchars($old['tinh_tp'] ?? '') ?>"
-               placeholder="Tỉnh/TP">
-      </div>
+      <?php
+$dc_prefix = 'reg';
+$dc_tinh   = $old['tinh_tp']   ?? '';
+$dc_phuong = $old['phuong_xa'] ?? '';
+$dc_diachi = $old['dia_chi']   ?? '';
+include 'includes/diachi_dropdown.php';
+?>
       <div class="col-12 d-flex gap-2 mt-4">
         <button type="submit" class="btn btn-sm px-4"
                 style="background:#f4a261;color:#fff;border:none;border-radius:8px;">

@@ -398,7 +398,6 @@ if (isset($_GET['id'])) {
 $filter_tt    = $_GET['trang_thai'] ?? 'tat_ca';
 $filter_tu    = $_GET['tu_ngay']   ?? '';
 $filter_den   = $_GET['den_ngay']  ?? '';
-$filter_phuong= $_GET['phuong']    ?? '';
 $filter_search= trim($_GET['search'] ?? '');
 $per_page     = 10;
 $trang_hien   = max(1, (int)($_GET['trang'] ?? 1));
@@ -435,13 +434,6 @@ if ($filter_search !== '') {
     });
 }
 
-if ($filter_phuong !== '') {
-    $don_hangs = admin_fuzzy_filter_rows($don_hangs, $filter_phuong, static function (array $row): array {
-        return [
-            ['value' => $row['dia_chi_giao'] ?? '', 'weight' => 1.0],
-        ];
-    }, ['min_score' => 120]);
-}
 
 $pagination = admin_paginate_rows($don_hangs, $trang_hien, $per_page);
 $total = $pagination['total'];
@@ -506,10 +498,12 @@ foreach ($stats as $st) $stats_map[$st['trang_thai']] = $st;
       <input type="date" name="den_ngay" class="form-control form-control-sm"
              value="<?= htmlspecialchars($filter_den) ?>" title="Đến ngày">
     </div>
-    <div class="col-md-2">
-      <input type="text" name="phuong" class="form-control form-control-sm"
-             placeholder="Lọc theo phường..."
-             value="<?= htmlspecialchars($filter_phuong) ?>">
+    <div class="col-md-2 d-flex align-items-center gap-2">
+      <div class="form-check mb-0">
+        <input class="form-check-input" type="checkbox" name="sort" value="phuong" id="sortPhuong"
+               <?= (($_GET['sort'] ?? '') === 'phuong') ? 'checked' : '' ?>>
+        <label class="form-check-label" for="sortPhuong" style="font-size:.85rem;">Xếp theo phường</label>
+      </div>
     </div>
     <div class="col-md-1 d-flex gap-1">
       <button type="submit" class="btn btn-sm btn-primary" style="border-radius:8px;">
@@ -521,15 +515,6 @@ foreach ($stats as $st) $stats_map[$st['trang_thai']] = $st;
     </div>
   </form>
 
-  <!-- Sắp xếp theo địa chỉ -->
-  <?php if ($filter_tt !== 'tat_ca'): ?>
-  <div class="mt-2">
-    <a href="/nhasach/admin/orders.php?trang_thai=<?= $filter_tt ?>&sort=phuong"
-       class="btn btn-sm btn-outline-secondary" style="border-radius:8px; font-size:.8rem;">
-      <i class="bi bi-geo-alt me-1"></i>Sắp xếp theo địa chỉ (phường)
-    </a>
-  </div>
-  <?php endif; ?>
 </div>
 
 <!-- BẢNG ĐƠN HÀNG -->

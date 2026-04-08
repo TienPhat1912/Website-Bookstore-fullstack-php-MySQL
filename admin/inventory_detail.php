@@ -92,6 +92,34 @@ $tong_xuat = array_sum(array_column($lo_xuat, 'so_luong'));
 $tong_tien_nhap = array_sum(array_column($lo_nhap, 'thanh_tien'));
 $tong_tien_xuat = array_sum(array_map(fn($x) => $x['so_luong'] * $x['gia_ban_luc_dat'], $lo_xuat));
 
+// Tồn đầu kỳ và tồn cuối kỳ (chỉ tính khi có lọc ngày)
+$ton_dau_ky  = 0;
+$ton_cuoi_ky = $sach['so_luong'];
+if ($co_loc_ngay) {
+    $stmt = $pdo->prepare("
+        SELECT COALESCE(SUM(cn.so_luong), 0)
+        FROM chi_tiet_nhap cn
+        JOIN phieu_nhap pn ON pn.id = cn.phieu_nhap_id
+        WHERE cn.sach_id = ? AND pn.trang_thai = 'done'
+          AND pn.ngay_nhap < ?
+    ");
+    $stmt->execute([$id, $tu_ngay]);
+    $nhap_truoc = (int)$stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("
+        SELECT COALESCE(SUM(ct.so_luong), 0)
+        FROM chi_tiet_don_hang ct
+        JOIN don_hang dh ON dh.id = ct.don_hang_id
+        WHERE ct.sach_id = ? AND dh.trang_thai = 'da_giao'
+          AND DATE(dh.ngay_dat) < ?
+    ");
+    $stmt->execute([$id, $tu_ngay]);
+    $xuat_truoc = (int)$stmt->fetchColumn();
+
+    $ton_dau_ky  = $nhap_truoc - $xuat_truoc;
+    $ton_cuoi_ky = $ton_dau_ky + $tong_nhap - $tong_xuat;
+}
+
 $tt_labels = [
     'cho_xu_ly'   => ['Chờ xử lý',    'bg-warning text-dark'],
     'da_xac_nhan' => ['Đã xác nhận',   'bg-info text-white'],
@@ -177,12 +205,12 @@ $tt_labels = [
           <div style="font-size:.72rem;color:#888;">Xuất trong kỳ</div>
         </div>
         <div class="col-3">
-          <div style="font-size:1.2rem;font-weight:700;color:#3fe0a0;"><?= number_format($tong_nhap - $tong_xuat) ?></div>
-          <div style="font-size:.72rem;color:#888;">Chênh lệch</div>
+          <div style="font-size:1.2rem;font-weight:700;color:#888;"><?= number_format($ton_dau_ky) ?></div>
+          <div style="font-size:.72rem;color:#888;">Tồn đầu kỳ</div>
         </div>
         <div class="col-3">
-          <div style="font-size:1.1rem;font-weight:700;color:#3fe0a0;"><?= number_format($sach['so_luong']) ?></div>
-          <div style="font-size:.72rem;color:#888;">Tồn hiện tại</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#3fe0a0;"><?= number_format($ton_cuoi_ky) ?></div>
+          <div style="font-size:.72rem;color:#888;">Tồn cuối kỳ</div>
         </div>
         <?php else: ?>
         <div class="col-4">

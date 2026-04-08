@@ -321,6 +321,7 @@ document.querySelectorAll('.ty-le-input').forEach(inp => {
     const row  = this.closest('tr');
     const ban  = row.querySelector('.gia-ban-cell');
     const ln   = row.querySelector('.tien-ln-cell');
+    if (tl < 0) return; // Không cho nhập tỷ lệ âm
     if (gia > 0) {
       const gb = Math.round(gia * (1 + tl / 100));
       const tl2 = gb - gia;

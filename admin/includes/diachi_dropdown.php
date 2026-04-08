@@ -45,7 +45,6 @@
     <div class="invalid-feedback"><?= $errors['dia_chi'] ?></div>
   <?php endif; ?>
 </div>
-
 <!-- Giá trị cũ để JS tự chọn lại khi reload -->
 <script>
 (function() {
